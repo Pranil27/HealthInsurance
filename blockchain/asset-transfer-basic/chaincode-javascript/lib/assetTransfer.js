@@ -273,7 +273,14 @@ class AssetTransfer extends Contract {
         return ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
     }
 
+    //Hospital
+    //Request Medical Service
+    
+
 }
+
+
+
 
 module.exports = AssetTransfer;
 
