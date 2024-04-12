@@ -5,6 +5,7 @@ import { LoginForm } from './Components/LoginForm/LoginForm';
 import { SignUpForm } from './Components/SignUpForm/SignUpForm';
 import {BrowserRouter as Router,Route,Routes,Navigate } from 'react-router-dom';
 import Profile from './Components/User/Profile';
+import HealthCareFrontPage from './Components/HealthCareFrontPage';
 
 
 
@@ -18,6 +19,7 @@ function App() {
            <Route path="/"  element={<SignUpForm />} />
            <Route path="/login" element={<LoginForm />} />
            <Route path="/client/dashboard" element={<ClientFrontPage />} />
+           <Route path="/healthcare/dashboard" element={<HealthCareFrontPage />} />
            <Route path="/client/profile" element={<Profile />} />
         </Routes>
   
