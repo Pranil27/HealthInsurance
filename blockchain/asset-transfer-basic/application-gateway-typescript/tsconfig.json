@@ -1,5 +1,7 @@
 {
    "extends":"@tsconfig/node18/tsconfig.json",
+    "target": "esnext",
+    "module": "commonjs",
    "compilerOptions": {
        "experimentalDecorators": true,
        "emitDecoratorMetadata": true,

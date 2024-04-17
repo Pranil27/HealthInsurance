@@ -14,9 +14,9 @@ class MyWorkload extends WorkloadModuleBase {
             console.log(`Worker ${this.workerIndex}: Creating asset ${assetID}`);
             const request = {
                 contractId: this.roundArguments.contractId,
-                contractFunction: 'CreateAsset',
+                contractFunction: 'RegisterClient',
                 invokerIdentity: 'User1',
-                contractArguments: [assetID,'blue','20','penguin','500'],
+                contractArguments: [assetID,'blue','20','penguin','500', 'asdas'],
                 readOnly: false
             };
 

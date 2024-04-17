@@ -70,6 +70,10 @@ function prettyJSONString(inputString) {
  * To see the SDK workings, try setting the logging to show on the console before running
  *        export HFC_LOGGING='{"debug":"console"}'
  */
+var caClient,wallet;
+exports.clientCA = () => {
+	return caClient;
+}
 async function main() {
 	try {
 		// build an in memory object with the network configuration (also known as a connection profile)
@@ -77,10 +81,10 @@ async function main() {
 
 		// build an instance of the fabric ca services client based on
 		// the information in the network configuration
-		const caClient = buildCAClient(FabricCAServices, ccp, 'ca.org1.example.com');
-
+		caClient = buildCAClient(FabricCAServices, ccp, 'ca.org1.example.com');
+        
 		// setup the wallet to hold the credentials of the application user
-		const wallet = await buildWallet(Wallets, walletPath);
+		wallet = await buildWallet(Wallets, walletPath);
 
 		// in a real application this would be done on an administrative flow, and only once
 		await enrollAdmin(caClient, wallet, mspOrg1);
@@ -181,3 +185,4 @@ async function main() {
 
 
 main();
+

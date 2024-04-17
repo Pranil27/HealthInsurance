@@ -13,6 +13,58 @@ const { Contract } = require('fabric-contract-api');
 
 class AssetTransfer extends Contract {
 
+    async InitLedger(ctx) {
+        const assets = [
+            {
+                ID: 'asset1',
+                Name: 'Kapil',
+                Dob: '12-03-1988',
+                Nominee: 'Tomoko',
+                InsuarancePolicy: 'Policy xyz',
+            },
+            {
+                ID: 'asset2',
+                Name: 'Kapil',
+                Dob: '12-03-1988',
+                Nominee: 'Tomoko',
+                InsuarancePolicy: 'Policy xyz',
+            },
+            {
+                ID: 'asset3',
+                Name: 'Kapil',
+                Dob: '12-03-1988',
+                Nominee: 'Tomoko',
+                InsuarancePolicy: 'Policy xyz',
+            },
+            {
+                ID: 'asset4',
+                Name: 'Kapil',
+                Dob: '12-03-1988',
+                Nominee: 'Tomoko',
+                InsuarancePolicy: 'Policy xyz',
+            }, 
+            {
+                ID: 'asset5',
+                Name: 'Kapil',
+                Dob: '12-03-1988',
+                Nominee: 'Tomoko',
+                InsuarancePolicy: 'Policy xyz',
+            },
+            {
+                ID: 'asset6',
+                Name: 'Kapil',
+                Dob: '12-03-1988',
+                Nominee: 'Tomoko',
+                InsuarancePolicy: 'Policy xyz',
+            },
+        ];
+
+        for (const asset of assets) {
+            asset.docType = 'asset';
+            await ctx.stub.putState(asset.ID, Buffer.from(stringify(sortKeysRecursive(asset))));
+        }
+    }
+
     // CreateAsset issues a new asset to the world state with given details.
     async CreateAsset(ctx, id, color, size, owner, appraisedValue) {
         const exists = await this.AssetExists(ctx, id);
@@ -72,6 +124,24 @@ class AssetTransfer extends Contract {
     }
 
     // UpdateAsset updates an existing asset in the world state with provided parameters.
+    async UpdateAsset(ctx, id, color, size, owner, appraisedValue) {
+        const exists = await this.AssetExists(ctx, id);
+        if (!exists) {
+            throw new Error(`The asset ${id} does not exist`);
+        }
+
+        // overwriting original asset with new asset
+        const updatedAsset = {
+            ID: id,
+            Color: color,
+            Size: size,
+            Owner: owner,
+            AppraisedValue: appraisedValue,
+        };
+        // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
+        return ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(updatedAsset))));
+    }
+    
     async UpdateClientDetails(ctx, id, name, dob, nominee, inspol) {
         const exists = await this.AssetExists(ctx, id);
         if (!exists) {
@@ -114,6 +184,16 @@ class AssetTransfer extends Contract {
         // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
         await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
         return oldNominee;
+    }
+    
+    async TransferAsset(ctx, id, newOwner) {
+        const assetString = await this.ReadAsset(ctx, id);
+        const asset = JSON.parse(assetString);
+        const oldOwner = asset.Owner;
+        asset.Owner = newOwner;
+        // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
+        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
+        return oldOwner;
     }
 
     // GetAllAssets returns all assets found in the world state.
@@ -284,56 +364,3 @@ class AssetTransfer extends Contract {
 
 module.exports = AssetTransfer;
 
-/* 
-async InitLedger(ctx) {
-        const assets = [
-            {
-                ID: 'asset1',
-                Name: 'Kapil',
-                Dob: '12-03-1988',
-                Nominee: 'Tomoko',
-                InsuarancePolicy: 'Policy xyz',
-            },
-            {
-                ID: 'asset2',
-                Name: 'Kapil',
-                Dob: '12-03-1988',
-                Nominee: 'Tomoko',
-                InsuarancePolicy: 'Policy xyz',
-            },
-            {
-                ID: 'asset3',
-                Name: 'Kapil',
-                Dob: '12-03-1988',
-                Nominee: 'Tomoko',
-                InsuarancePolicy: 'Policy xyz',
-            },
-            {
-                ID: 'asset4',
-                Name: 'Kapil',
-                Dob: '12-03-1988',
-                Nominee: 'Tomoko',
-                InsuarancePolicy: 'Policy xyz',
-            }, 
-            {
-                ID: 'asset5',
-                Name: 'Kapil',
-                Dob: '12-03-1988',
-                Nominee: 'Tomoko',
-                InsuarancePolicy: 'Policy xyz',
-            },
-            {
-                ID: 'asset6',
-                Name: 'Kapil',
-                Dob: '12-03-1988',
-                Nominee: 'Tomoko',
-                InsuarancePolicy: 'Policy xyz',
-            },
-        ];
-
-        for (const asset of assets) {
-            asset.docType = 'asset';
-            await ctx.stub.putState(asset.ID, Buffer.from(stringify(sortKeysRecursive(asset))));
-        }
-    }
-*/
