@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import './SignUpForm.css';
 import {useNavigate} from "react-router-dom";
+import { useState } from 'react';
 import { FaUser,FaLock } from "react-icons/fa";
 import axios from 'axios';
 
@@ -28,7 +29,17 @@ export const SignUpForm = ({ toggleSignUp }) => {
     }
 
     const switchToDashboard = () => {
-        navigate('/client/dashboard');
+        if (selectedOption === 'client') {
+            navigate('/client/dashboard');
+        } else if (selectedOption === 'HealthCare') {
+            navigate('/healthcare/dashboard');
+        } else if (selectedOption === 'Insurer') {
+            navigate('/insurer/dashboard');
+        }
+    }
+
+    const handleOptionChange = (event) => {
+        setSelectedOption(event.target.value);
     }
 
   return (
@@ -52,7 +63,7 @@ export const SignUpForm = ({ toggleSignUp }) => {
                 <FaLock className='icon'/>
             </div>
             <div className="input-box">
-                <select name="organisation" className='options'>
+                <select name="organisation" className='options' onChange={handleOptionChange} value={selectedOption}>
                     <option value="client">Client</option>
                     <option value="Insurer">Insurer</option>
                     <option value="HealthCare">HealthCare</option>
