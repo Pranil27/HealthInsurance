@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import './SignUpForm.css';
 import {useNavigate} from "react-router-dom";
-import { useState } from 'react';
-import { FaUser,FaLock } from "react-icons/fa";
+import { FaUser,FaLock} from "react-icons/fa";
 import axios from 'axios';
 
 
@@ -10,18 +9,29 @@ export const SignUpForm = ({ toggleSignUp }) => {
     const navigate = useNavigate();
     const [username,setUsername] = useState('');
     const [password,setPassword] = useState('');
+    const [email,setEmail] = useState('');
+    const [dob,setDob] = useState('');
+    const [mobile,setMobile] = useState('');
+    const [selectedOption,setSelectedOption] = useState('client');
 
-    const handleSubmit = async() => {
-        try {
-            console.log(username);
-            console.log(password);
-            const response = await axios.post('http://localhost:5000/signup', { username, password });
-            
-            console.log(response.data); // Handle successful registration
-            navigate('/login'); // Redirect to the login page after successful registration
-          } catch (error) {
-            console.error(error.response.data.message); // Handle registration error
-          }
+    const handleSubmit = async(e) => {
+        e.preventDefault();
+        const response = await fetch(`http://localhost:5000/signup`,{
+            method:'POST',
+            headers:{
+                'Content-Type':'application/json'
+            },
+            body:JSON.stringify({username:username,email:email,dob:dob,mobile:mobile,password:password})
+        });
+
+        const json = await response.json();
+        console.log(json);
+
+        if(!json.success){
+            alert("Enter Valid Credentials");
+        } else {
+            navigate('/login');
+        }
     }
 
     const switchToLogin = () => {
@@ -48,8 +58,32 @@ export const SignUpForm = ({ toggleSignUp }) => {
             <h1>SignUp</h1>
             <div className="input-box">
                 <input type="text" 
-                    placeholder='UserName' value={username}
+                    placeholder='Name' value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    required 
+                />
+                <FaUser className='icon'/>
+            </div>
+            <div className="input-box">
+                <input type="text" 
+                    placeholder='Email' value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required 
+                />
+                <FaUser className='icon'/>
+            </div>
+            <div className="input-box">
+                <input type="text" 
+                    placeholder='Date of Birth' value={dob}
+                    onChange={(e) => setDob(e.target.value)}
+                    required 
+                />
+                <FaUser className='icon'/>
+            </div>
+            <div className="input-box">
+                <input type="text" 
+                    placeholder='Mobile Number' value={mobile}
+                    onChange={(e) => setMobile(e.target.value)}
                     required 
                 />
                 <FaUser className='icon'/>

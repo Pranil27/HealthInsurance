@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect } from 'react'
+import React, { Fragment, useEffect, useState } from 'react'
 //import MetaData from '../layout/MetaData'
 import { Link } from 'react-router-dom'
 import { useSelector } from 'react-redux'
@@ -14,6 +14,41 @@ const Profile = () => {
     //         history("/login");
     //     }
     // },[history,isAuthenticated])
+
+    const [userDetails, setUserDetails] = useState({"result2":{}})
+
+    const fetchUserDetails = async () => {
+        console.log(localStorage.getItem('userEmail'))
+        await fetch("http://localhost:5000/getUserDetails", {
+            // credentials: 'include',
+            // Origin:"http://localhost:3000/login",
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body:JSON.stringify({
+                email:localStorage.getItem('userEmail'),username:localStorage.getItem('username')
+            })
+        }).then(async (res) => {
+            let response = await res.json();
+            await setUserDetails(response);
+            console.log(response);
+        })
+
+
+
+        // await res.map((data)=>{
+        //    console.log(data)
+        // })
+
+
+    }
+
+    useEffect(() => {
+        fetchUserDetails()
+    }, [])
+
+
   return (
    
 
@@ -29,16 +64,21 @@ const Profile = () => {
              <div>
                  <div>
                      <h4>Full Name</h4>
-                     <p>{"Pranil"}</p>
+                     <p>{userDetails.Name}</p>
                  </div>
                  <div>
                      <h4>Email</h4>
-                     <p>{"pranil20214023@mnnit.ac.in"}</p>
+                     <p>{userDetails.ID}</p>
                  </div>
                  <div>
-                     <h4>Joined On</h4>
-                     <p>{"7/04/2024"}</p>
+                     <h4>Date of Birth</h4>
+                     <p>{userDetails.Dob}</p>
                  </div>
+                 <div>
+                     <h4>Mobile Number</h4>
+                     <p>{userDetails.Mobile}</p>
+                 </div>
+                 
  
                  <div>
                      <Link to="/policies">My Policies</Link>

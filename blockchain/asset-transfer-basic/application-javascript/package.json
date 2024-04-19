@@ -17,7 +17,8 @@
         "body-parser": "^1.20.2",
         "express": "^4.19.2",
         "fabric-ca-client": "^2.2.19",
-        "fabric-network": "^2.2.19"
+        "fabric-network": "^2.2.19",
+        "nodemon": "^3.1.0"
     },
     "devDependencies": {
         "eslint": "^7.32.0"

@@ -84,7 +84,7 @@ class AssetTransfer extends Contract {
         return JSON.stringify(asset);
     }
 
-    async RegisterClient(ctx, id, name, dob, nominee, policy_id) {
+    async RegisterClient(ctx, id, name, dob, mobile, password) {
         const exists = await this.AssetExists(ctx, id);
         if (exists) {
             throw new Error(`The asset ${id} already exists`);
@@ -94,13 +94,13 @@ class AssetTransfer extends Contract {
             ID: id,
             Name: name,
             Dob: dob,
-            Nominee: nominee,
-            PolicyId: policy_id,
+            Mobile: mobile,
+            Password: password,
         };
         // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
         await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
 
-        await this.IssuePolicy(ctx,id,policy_id);
+        // await this.IssuePolicy(ctx,id,policy_id);
 
         return JSON.stringify(asset);
     }
