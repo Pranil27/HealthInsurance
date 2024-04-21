@@ -49,7 +49,7 @@ initialize(); // Initialize the application
 // Signup endpoint for registering a new user
 app.post('/signup', async (req, res) => {
     try {
-        const username = req.body.username;
+        const username = req.body.email;
         await registerAndEnrollUser(caClient, wallet, mspOrg1, username, 'org1.department1');
         const gateway = new Gateway();
 
@@ -69,9 +69,23 @@ app.post('/signup', async (req, res) => {
 
 			// Get the contract from the network.
 			const contract = network.getContract(chaincodeName);
-            console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
-			result = await contract.submitTransaction('RegisterClient', req.body.email, req.body.username, req.body.dob, req.body.mobile, req.body.password);
-			console.log('*** Result: committed');
+            //console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
+			if(req.body.role === 'client'){
+				result = await contract.submitTransaction('RegisterClient', req.body.email, 
+			    req.body.username, req.body.dob, req.body.mobile, 
+			    req.body.role, req.body.password);
+			} else if(req.body.role === 'Hospital'){
+				result = await contract.submitTransaction('RegisterHospital', req.body.email, 
+			    req.body.username, req.body.address, req.body.mobile, 
+			    req.body.role, req.body.password);
+			} else {
+				result = await contract.submitTransaction('RegisterInsuranceProvider', req.body.email, 
+			    req.body.username, req.body.address, req.body.mobile, 
+			    req.body.role, req.body.password);
+			}
+			
+
+			//console.log('*** Result: committed');
 			if (`${result}` !== '') {
 				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 			}
@@ -90,7 +104,7 @@ app.post('/signup', async (req, res) => {
 // Login endpoint for authenticating and authorizing the user
 app.post('/login', async (req, res) => {
     try {
-        const username = req.body.username;
+        const username = req.body.email;
         const userIdentity = await wallet.get(username);
         if (!userIdentity) {
             res.status(401).json("User not found. Please register first!");
@@ -127,7 +141,7 @@ app.post('/login', async (req, res) => {
 		}
         console.log(result2.Password);
         if(result2.Password === req.body.password)
-        res.json({success:true});
+        res.json({success:true,role:result2.Role});
         else
         res.json("Incorrect Password");
     } catch (error) {

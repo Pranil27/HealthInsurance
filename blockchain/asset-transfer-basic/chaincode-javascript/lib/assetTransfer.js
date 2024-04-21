@@ -84,7 +84,7 @@ class AssetTransfer extends Contract {
         return JSON.stringify(asset);
     }
 
-    async RegisterClient(ctx, id, name, dob, mobile, password) {
+    async RegisterClient(ctx, id, name, dob, mobile, role, password) {
         const exists = await this.AssetExists(ctx, id);
         if (exists) {
             throw new Error(`The asset ${id} already exists`);
@@ -95,6 +95,53 @@ class AssetTransfer extends Contract {
             Name: name,
             Dob: dob,
             Mobile: mobile,
+            Role:role,
+            Password: password,
+        };
+        // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
+        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
+
+        // await this.IssuePolicy(ctx,id,policy_id);
+
+        return JSON.stringify(asset);
+    }
+
+
+    async RegisterHospital(ctx, id, name, address, mobile, role, password) {
+        const exists = await this.AssetExists(ctx, id);
+        if (exists) {
+            throw new Error(`The asset ${id} already exists`);
+        }
+
+        const asset = {
+            ID: id,
+            Name: name,
+            Address: address,
+            Mobile: mobile,
+            Role:role,
+            Password: password,
+        };
+        // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
+        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
+
+        // await this.IssuePolicy(ctx,id,policy_id);
+
+        return JSON.stringify(asset);
+    }
+
+
+    async RegisterInsuranceProvider(ctx, id, name, address, mobile, role, password) {
+        const exists = await this.AssetExists(ctx, id);
+        if (exists) {
+            throw new Error(`The asset ${id} already exists`);
+        }
+
+        const asset = {
+            ID: id,
+            Name: name,
+            Address: address,
+            Mobile: mobile,
+            Role:role,
             Password: password,
         };
         // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'

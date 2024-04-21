@@ -7,7 +7,7 @@ export const LoginForm = ({toggleSignUp}) => {
     const navigate = useNavigate();
     const [email,setEmail] = useState('');
     const [password,setPassword] = useState('');
-    const [username,setUsername] = useState('');
+    //const [username,setUsername] = useState('');
     //const [selectedOption,setSelectedOption] = useState('client');
 
     const handleSubmit = async(e) => {
@@ -17,7 +17,7 @@ export const LoginForm = ({toggleSignUp}) => {
             headers:{
                 'Content-Type':'application/json'
             },
-            body:JSON.stringify({username:username,email:email,password:password}),
+            body:JSON.stringify({email:email,password:password}),
         });
 
         const json = await response.json();
@@ -28,11 +28,17 @@ export const LoginForm = ({toggleSignUp}) => {
         else {
             
             localStorage.setItem("userEmail",email);
-            localStorage.setItem("username",username);
+            //localStorage.setItem("username",username);
             //localStorage.setItem("authToken",json.authToken);
             console.log(localStorage.getItem("userEmail"));
-            console.log(localStorage.getItem("username"));
-            navigate("/client/profile");
+            //console.log(localStorage.getItem("username"));
+            if (json.role === 'client') {
+                navigate('/client/dashboard');
+            } else if (json.role === 'Hospital') {
+                navigate('/healthcare/dashboard');
+            } else if (json === 'Insurer') {
+                navigate('/insurer/dashboard');
+            }
         }
         
     }
@@ -51,13 +57,6 @@ export const LoginForm = ({toggleSignUp}) => {
     <div className='wrapper'>
         <form action="">
             <h1>Login</h1>
-            <div className="input-box">
-                <input type="text" placeholder='Username'
-                   value={username} 
-                   onChange={(e) => setUsername(e.target.value)} 
-                   required />
-                <FaUser className='icon'/>
-            </div>
             <div className="input-box">
                 <input type="text" placeholder='Email'
                    value={email} 

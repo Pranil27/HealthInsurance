@@ -12,6 +12,7 @@ export const SignUpForm = ({ toggleSignUp }) => {
     const [email,setEmail] = useState('');
     const [dob,setDob] = useState('');
     const [mobile,setMobile] = useState('');
+    const [address,setAddress] = useState('');
     const [selectedOption,setSelectedOption] = useState('client');
 
     const handleSubmit = async(e) => {
@@ -21,7 +22,8 @@ export const SignUpForm = ({ toggleSignUp }) => {
             headers:{
                 'Content-Type':'application/json'
             },
-            body:JSON.stringify({username:username,email:email,dob:dob,mobile:mobile,password:password})
+            body:JSON.stringify({username:username,email:email,dob:dob,
+                role:selectedOption,mobile:mobile,password:password,address:address})
         });
 
         const json = await response.json();
@@ -38,15 +40,15 @@ export const SignUpForm = ({ toggleSignUp }) => {
         navigate('/login');
     }
 
-    const switchToDashboard = () => {
-        if (selectedOption === 'client') {
-            navigate('/client/dashboard');
-        } else if (selectedOption === 'HealthCare') {
-            navigate('/healthcare/dashboard');
-        } else if (selectedOption === 'Insurer') {
-            navigate('/insurer/dashboard');
-        }
-    }
+    // const switchToDashboard = () => {
+    //     if (selectedOption === 'client') {
+    //         navigate('/client/dashboard');
+    //     } else if (selectedOption === 'Hospital') {
+    //         navigate('/healthcare/dashboard');
+    //     } else if (selectedOption === 'Insurer') {
+    //         navigate('/insurer/dashboard');
+    //     }
+    // }
 
     const handleOptionChange = (event) => {
         setSelectedOption(event.target.value);
@@ -72,13 +74,23 @@ export const SignUpForm = ({ toggleSignUp }) => {
                 />
                 <FaUser className='icon'/>
             </div>
-            <div className="input-box">
+            <div className="input-box" hidden={selectedOption!='client'}>
                 <input type="text" 
                     placeholder='Date of Birth' value={dob}
                     onChange={(e) => setDob(e.target.value)}
+                    
                     required 
                 />
-                <FaUser className='icon'/>
+                <FaUser className='icon' />
+            </div>
+            <div className="input-box" hidden={selectedOption === 'client'}>
+                <input type="text" 
+                    placeholder='Address' value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    
+                    required 
+                />
+                <FaUser className='icon' />
             </div>
             <div className="input-box">
                 <input type="text" 
@@ -100,7 +112,7 @@ export const SignUpForm = ({ toggleSignUp }) => {
                 <select name="organisation" className='options' onChange={handleOptionChange} value={selectedOption}>
                     <option value="client">Client</option>
                     <option value="Insurer">Insurer</option>
-                    <option value="HealthCare">HealthCare</option>
+                    <option value="Hospital">Hospital</option>
                 </select>
             </div>
             <button type='submit' onClick={handleSubmit}>SignUp</button>
