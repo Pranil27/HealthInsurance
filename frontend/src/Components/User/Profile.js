@@ -27,7 +27,7 @@ const Profile = () => {
                 'Content-Type': 'application/json'
             },
             body:JSON.stringify({
-                email:localStorage.getItem('userEmail'),username:localStorage.getItem('username')
+                email:localStorage.getItem('userEmail')
             })
         }).then(async (res) => {
             let response = await res.json();
@@ -81,7 +81,7 @@ const Profile = () => {
                  
  
                  <div>
-                     <Link to="/policies">My Policies</Link>
+                     <Link to="/client/policies">My Policies</Link>
                      <Link to="/password/update">Change Password</Link>
                  </div>
  

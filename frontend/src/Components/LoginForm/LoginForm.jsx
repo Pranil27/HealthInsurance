@@ -36,7 +36,7 @@ export const LoginForm = ({toggleSignUp}) => {
                 navigate('/client/dashboard');
             } else if (json.role === 'Hospital') {
                 navigate('/healthcare/dashboard');
-            } else if (json === 'Insurer') {
+            } else if (json.role === 'Insurer') {
                 navigate('/insurer/dashboard');
             }
         }

@@ -161,7 +161,7 @@ app.post('/getUserDetails', async(req,res) => {
 			// signed by this user using the credentials stored in the wallet.
 			await gateway.connect(ccp, {
 				wallet,
-				identity: req.body.username,
+				identity: req.body.email,
 				discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
 			});
 
@@ -185,7 +185,248 @@ app.post('/getUserDetails', async(req,res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+app.post('/registerPolicy', async (req,res) => {
+	try{
+		const gateway = new Gateway();
+	
+			try {
+				// setup the gateway instance
+				// The user will now be able to create connections to the fabric network and be able to
+				// submit transactions and query. All transactions submitted by this gateway will be
+				// signed by this user using the credentials stored in the wallet.
+				await gateway.connect(ccp, {
+					wallet,
+					identity: req.body.email,
+					discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
+				});
+				
+	
+				// Build a network instance based on the channel where the smart contract is deployed
+				const network = await gateway.getNetwork(channelName);
+	
+				// Get the contract from the network.
+				const contract = network.getContract(chaincodeName);
+				console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
+				const result = await contract.submitTransaction('RegisterPolicy', 
+				req.body.id, req.body.email,
+			    req.body.username, req.body.duration, req.body.premium, 
+			    req.body.hospitals, req.body.amount);
+				var result2=JSON.parse(prettyJSONString(result.toString()));
+				
+				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			   //console.log(result2);
+			}finally {
+				// Disconnect from the gateway when the application is closing
+				// This will close all connections to the network
+				gateway.disconnect();
+			}
+			res.json(result2);
+		} catch (error) {
+			res.status(500).json({ error: error.message });
+		}
+});
+
+app.post('/getPolicies', async(req,res) => {
+	try{
+		const gateway = new Gateway();
+	
+			try {
+				// setup the gateway instance
+				// The user will now be able to create connections to the fabric network and be able to
+				// submit transactions and query. All transactions submitted by this gateway will be
+				// signed by this user using the credentials stored in the wallet.
+				await gateway.connect(ccp, {
+					wallet,
+					identity: req.body.email,
+					discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
+				});
+				
+	
+				// Build a network instance based on the channel where the smart contract is deployed
+				const network = await gateway.getNetwork(channelName);
+	
+				// Get the contract from the network.
+				const contract = network.getContract(chaincodeName);
+				console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
+				let result = await contract.evaluateTransaction('GetAllPolicies');
+            
+				var result2=JSON.parse(prettyJSONString(result.toString()));
+				
+				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			   //console.log(result2);
+			}finally {
+				// Disconnect from the gateway when the application is closing
+				// This will close all connections to the network
+				gateway.disconnect();
+			}
+			res.json(result2);
+		} catch (error) {
+			res.status(500).json({ error: error.message });
+		}
+});
+
+app.post('/issuePolicy', async(req,res) => {
+	const gateway = new Gateway();
+
+		try {
+			// setup the gateway instance
+			// The user will now be able to create connections to the fabric network and be able to
+			// submit transactions and query. All transactions submitted by this gateway will be
+			// signed by this user using the credentials stored in the wallet.
+			await gateway.connect(ccp, {
+				wallet,
+				identity: req.body.email,
+				discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
+			});
+
+			// Build a network instance based on the channel where the smart contract is deployed
+			const network = await gateway.getNetwork(channelName);
+
+			// Get the contract from the network.
+			const contract = network.getContract(chaincodeName);
+			let result = await contract.evaluateTransaction('GetPolicy',req.body.policy);
+            
+			var result2=JSON.parse(prettyJSONString(result.toString()));
+            console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
+			let result3 = await contract.submitTransaction('IssuePolicy', req.body.email+"_"+req.body.policy,
+			req.body.email, req.body.policy, req.body.nominee, req.body.aadhar, req.body.relation, req.body.mobile,
+		    result2.Duration,result2.Premium,0,parseInt(result2.Duration)*12,result2.Amount);
+
+			//console.log('*** Result: committed');
+			if (`${result3}` !== '') {
+				console.log(`*** Result: ${prettyJSONString(result3.toString())}`);
+			}
+        }finally {
+			// Disconnect from the gateway when the application is closing
+			// This will close all connections to the network
+			gateway.disconnect();
+		}
+        res.json({success:true});
+
+    
+});
+
+app.post('/myPolicies',async(req,res) => {
+	try{
+		const gateway = new Gateway();
+	
+			try {
+				// setup the gateway instance
+				// The user will now be able to create connections to the fabric network and be able to
+				// submit transactions and query. All transactions submitted by this gateway will be
+				// signed by this user using the credentials stored in the wallet.
+				await gateway.connect(ccp, {
+					wallet,
+					identity: req.body.email,
+					discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
+				});
+				
+	
+				// Build a network instance based on the channel where the smart contract is deployed
+				const network = await gateway.getNetwork(channelName);
+	
+				// Get the contract from the network.
+				const contract = network.getContract(chaincodeName);
+				console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
+				let result = await contract.evaluateTransaction('GetMyPolicies',req.body.email);
+            
+				var result2=JSON.parse(prettyJSONString(result.toString()));
+				
+				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			   //console.log(result2);
+			}finally {
+				// Disconnect from the gateway when the application is closing
+				// This will close all connections to the network
+				gateway.disconnect();
+			}
+			res.json(result2);
+		} catch (error) {
+			res.status(500).json({ error: error.message });
+		}
 })
+
+
+app.post('/insurerPolicies',async(req,res) => {
+	try{
+		const gateway = new Gateway();
+	
+			try {
+				// setup the gateway instance
+				// The user will now be able to create connections to the fabric network and be able to
+				// submit transactions and query. All transactions submitted by this gateway will be
+				// signed by this user using the credentials stored in the wallet.
+				await gateway.connect(ccp, {
+					wallet,
+					identity: req.body.email,
+					discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
+				});
+				
+	
+				// Build a network instance based on the channel where the smart contract is deployed
+				const network = await gateway.getNetwork(channelName);
+	
+				// Get the contract from the network.
+				const contract = network.getContract(chaincodeName);
+				console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
+				let result = await contract.evaluateTransaction('GetInsurerPolicies',req.body.email);
+            
+				var result2=JSON.parse(prettyJSONString(result.toString()));
+				
+				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			   //console.log(result2);
+			}finally {
+				// Disconnect from the gateway when the application is closing
+				// This will close all connections to the network
+				gateway.disconnect();
+			}
+			res.json(result2);
+		} catch (error) {
+			res.status(500).json({ error: error.message });
+		}
+})
+
+app.post('/payPremium', async(req,res) => {
+	const gateway = new Gateway();
+
+		try {
+			// setup the gateway instance
+			// The user will now be able to create connections to the fabric network and be able to
+			// submit transactions and query. All transactions submitted by this gateway will be
+			// signed by this user using the credentials stored in the wallet.
+			await gateway.connect(ccp, {
+				wallet,
+				identity: req.body.email,
+				discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
+			});
+
+			// Build a network instance based on the channel where the smart contract is deployed
+			const network = await gateway.getNetwork(channelName);
+
+			// Get the contract from the network.
+			const contract = network.getContract(chaincodeName);
+			let result = await contract.evaluateTransaction('GetAllAssets');
+            
+			var result2=JSON.parse(prettyJSONString(result.toString()));
+			console.log(result2);
+            console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
+			let result3 = await contract.submitTransaction('PayPremium', 'TXN_'+req.body.email+'_'+req.body.policy);
+
+			//console.log('*** Result: committed');
+			if (`${result3}` !== '') {
+				console.log(`*** Result: ${prettyJSONString(result3.toString())}`);
+			}
+        }finally {
+			// Disconnect from the gateway when the application is closing
+			// This will close all connections to the network
+			gateway.disconnect();
+		}
+        res.json({success:true});
+
+    
+});
+
 
 // Start the server
 app.listen(5000, () => {

@@ -7,6 +7,8 @@ import {BrowserRouter as Router,Route,Routes,Navigate } from 'react-router-dom';
 import Profile from './Components/User/Profile';
 import HealthCareFrontPage from './Components/HealthCareFrontPage';
 import InsurerFrontPage from './Components/Insurer/InsurerFrontPage';
+import Payment from './Components/Payment/Payment';
+import MyPolicies from './Components/User/MyPolicies';
 
 
 
@@ -23,6 +25,8 @@ function App() {
            <Route path="/healthcare/dashboard" element={<HealthCareFrontPage />} />
            <Route path="/insurer/dashboard" element={<InsurerFrontPage/>}/>
            <Route path="/client/profile" element={<Profile />} />
+           <Route path="/client/policies" element={<MyPolicies />} />
+           <Route path="/client/payment" element={<Payment />} />
         </Routes>
   
 
