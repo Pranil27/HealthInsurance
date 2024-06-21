@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
 
 const { Gateway, Wallets } = require('fabric-network');
 const FabricCAServices = require('fabric-ca-client');
@@ -50,6 +51,7 @@ initialize(); // Initialize the application
 app.post('/signup', async (req, res) => {
     try {
         const username = req.body.email;
+		
         await registerAndEnrollUser(caClient, wallet, mspOrg1, username, 'org1.department1');
         const gateway = new Gateway();
 
@@ -69,19 +71,24 @@ app.post('/signup', async (req, res) => {
 
 			// Get the contract from the network.
 			const contract = network.getContract(chaincodeName);
+			const saltRounds = 10;
+
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+
             //console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
 			if(req.body.role === 'client'){
 				result = await contract.submitTransaction('RegisterClient', req.body.email, 
 			    req.body.username, req.body.dob, req.body.mobile, 
-			    req.body.role, req.body.password);
+			    req.body.role, hashedPassword);
 			} else if(req.body.role === 'Hospital'){
 				result = await contract.submitTransaction('RegisterHospital', req.body.email, 
 			    req.body.username, req.body.address, req.body.mobile, 
-			    req.body.role, req.body.password);
+			    req.body.role, hashedPassword);
 			} else {
 				result = await contract.submitTransaction('RegisterInsuranceProvider', req.body.email, 
 			    req.body.username, req.body.address, req.body.mobile, 
-			    req.body.role, req.body.password);
+			    req.body.role, hashedPassword);
 			}
 			
 
@@ -89,12 +96,13 @@ app.post('/signup', async (req, res) => {
 			if (`${result}` !== '') {
 				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 			}
+			res.json({success:true});
         }finally {
 			// Disconnect from the gateway when the application is closing
 			// This will close all connections to the network
 			gateway.disconnect();
 		}
-        res.json({success:true});
+        
 
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -133,17 +141,28 @@ app.post('/login', async (req, res) => {
             var result2=JSON.parse(prettyJSONString(result.toString()));
             
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+            console.log(result2);
+			const passwordMatch = await bcrypt.compare(req.body.password, result2.Password);
+        if (passwordMatch) {
+            res.json({success:true,role:result2.Role});
+        } else {
+            res.json("Incorrect Password");
+        }
            //console.log(result2);
         }finally {
 			// Disconnect from the gateway when the application is closing
 			// This will close all connections to the network
 			gateway.disconnect();
 		}
-        console.log(result2.Password);
-        if(result2.Password === req.body.password)
-        res.json({success:true,role:result2.Role});
-        else
-        res.json("Incorrect Password");
+        // console.log(result2);
+		
+		// if (!passwordMatch) {
+        //     throw new Error('Invalid password');
+        // }
+        // if(!result2.ID && result2.ID === username )
+        // res.json({success:true,role:result2.Role});
+        // else
+        // res.json("Incorrect Password");
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

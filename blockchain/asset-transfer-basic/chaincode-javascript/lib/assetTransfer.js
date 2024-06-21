@@ -10,6 +10,7 @@
 const stringify  = require('json-stringify-deterministic');
 const sortKeysRecursive  = require('sort-keys-recursive');
 const { Contract } = require('fabric-contract-api');
+const bcrypt = require('bcrypt');
 
 class AssetTransfer extends Contract {
 
@@ -113,6 +114,8 @@ class AssetTransfer extends Contract {
             throw new Error(`The asset ${id} already exists`);
         }
 
+        
+
         const asset = {
             ID: id,
             Name: name,
@@ -136,6 +139,7 @@ class AssetTransfer extends Contract {
             throw new Error(`The asset ${id} already exists`);
         }
 
+
         const asset = {
             ID: id,
             Name: name,
@@ -151,6 +155,23 @@ class AssetTransfer extends Contract {
 
         return JSON.stringify(asset);
     }
+    //user verification
+    async VerifyUser(ctx, userId, rawPassword) {
+        // Retrieve the user from the ledger
+        const userBytes = await ctx.stub.getState(userId);
+        if (!userBytes || userBytes.length === 0) {
+            throw new Error(`User with ID ${userId} does not exist`);
+        }
+    
+        // Parse the user data
+        const user = JSON.parse(userBytes.toString());
+    
+        // Verify the password
+        
+    
+        return JSON.stringify(user);
+    }
+    
 
     // ReadAsset returns the asset stored in the world state with given id.
     async ReadAsset(ctx, id) {
@@ -427,41 +448,6 @@ class AssetTransfer extends Contract {
         return assetJSON.toString();
     }
 
-    // async PayPremium(ctx,id) {
-    //     const premium_asset = await ctx.stub.getState(id);
-
-    //     //const assetString = await this.GetPremiumInfo(ctx, client_id, policy_id);
-    //     //const premium_asset = JSON.parse(assetString);
-    //     const amount=premium_asset.AmountPaid;
-    //     const pre=premium_asset.Premium;
-    //     var amt=parseInt(amount)+parseInt(pre);
-    //     var prepaid=parseInt(premium_asset.PremiumsPaid.toString());
-    //     var preleft=parseInt(premium_asset.PremiumsLeft.toString());
-    //     //const id="TXN_"+client_id+"_"+policy_id;
-
-    //     if(preleft-1 === 0){
-    //         await this.Refund(ctx,client_id,policy_id);
-    //         return `Refund Initiated`;
-    //     }
-    //     prepaid = prepaid+1;
-    //     preleft = preleft-1;
-    //     const exists = await this.DeleteAsset(ctx, id);
-    //     const asset = {
-    //         ID: id,
-    //         Premium: premium_asset.Premium,
-    //         Duration: premium_asset.Duration,
-    //         Nominee:nominee,
-    //         Relation:relation,
-    //         MobileNumber:mobile,
-    //         AmountPaid: amt.toString(),
-    //         PremiumsPaid:prepaid.toString(),
-    //         PremiumsLeft:preleft.toString(),
-    //         Amount: premium_asset.Amount,
-    //     };
-    //     // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
-    //     return ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(asset))));
-    // }
-
     async PayPremium(ctx, id) {
     
         let premiumAsset;
@@ -492,23 +478,6 @@ class AssetTransfer extends Contract {
                 break;
             }
         }
-        // try {
-        //     const dataString = premiumAssetBytes.toString();
-        //     if (!dataString || dataString.trim() === "") {
-        //         throw new Error("Data fetched from ledger is empty or undefined");
-        //     }
-        //     premiumAsset = JSON.parse(dataString);
-        // } catch (error) {
-        //     throw new Error(`Failed to parse asset data for ID ${id}: ${error.message}`);
-        // }
-    
-        // Ensure all required properties are present in the parsed asset
-        // const requiredProperties = ['Premium', 'Premium_left', 'Premium_paid', 'Amount', 'Nominee', 'Relation', 'Mobile', 'Duration'];
-        // for (let property of requiredProperties) {
-        //     if (!premiumAsset.hasOwnProperty(property)) {
-        //         throw new Error(`Asset data for ID ${id} is missing required property: ${property}`);
-        //     }
-        // }
     
         // Update the amount paid
         const amountPaid = parseInt(premiumAsset.AmountPaid || "0");  // Default to 0 if undefined
