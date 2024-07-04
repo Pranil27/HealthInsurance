@@ -58,7 +58,7 @@ export const LoginForm = ({toggleSignUp}) => {
         <form action="">
             <h1>Login</h1>
             <div className="input-box">
-                <input type="text" placeholder='Email'
+                <input type="text" placeholder='Id'
                    value={email} 
                    onChange={(e) => setEmail(e.target.value)} 
                    required />

@@ -14,11 +14,13 @@
     "author": "Hyperledger",
     "license": "Apache-2.0",
     "dependencies": {
+        "@grpc/grpc-js": "^1.10.10",
+        "@hyperledger/fabric-gateway": "^1.5.1",
         "bcrypt": "^5.1.1",
         "body-parser": "^1.20.2",
         "express": "^4.19.2",
         "fabric-ca-client": "^2.2.19",
-        "fabric-network": "^2.2.19",
+        "fabric-network": "^2.2.4",
         "nodemon": "^3.1.0"
     },
     "devDependencies": {
