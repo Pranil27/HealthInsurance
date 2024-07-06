@@ -334,7 +334,7 @@ class AssetTransfer extends Contract {
 
     async GetPolicy(ctx,policy) {
         const iterator = await ctx.stub.getStateByRange('', ''); // Retrieve all assets
-        let policies ;
+        let policies = null ;
     
         // Iterate through the result set and add policies to the array
         while (true) {
@@ -347,15 +347,17 @@ class AssetTransfer extends Contract {
                 // Check if the key starts with "POLICY_"
                 if (key === policy) {
                     policies = asset;
+                    break;
                 }
             }
     
             // If there are no more results, break the loop
             if (result.done) {
                 await iterator.close();
-                return JSON.stringify(policies);
+                break;
             }
         }
+        return JSON.stringify(policies);
     }
     
  

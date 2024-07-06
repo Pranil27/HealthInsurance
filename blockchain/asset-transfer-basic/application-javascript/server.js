@@ -2,11 +2,14 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 
+const payRoute = require("./Routes/pay.routes.js");
+
 const { Gateway, Wallets } = require('fabric-network');
 const FabricCAServices = require('fabric-ca-client');
 const path = require('path');
 const { buildCAClient, registerAndEnrollUser, enrollAdmin } = require('../../test-application/javascript/CAUtil.js');
 const { buildCCPOrg1, buildWallet } = require('../../test-application/javascript/AppUtil.js');
+const { sha256 } = require('@hyperledger/fabric-gateway/dist/hash/hashes.js');
 
 const channelName = process.env.CHANNEL_NAME || 'mychannel';
 const chaincodeName = process.env.CHAINCODE_NAME || 'basic';
@@ -36,6 +39,8 @@ app.use((req, res, next) => {
 
 let ccp, wallet, gateway, caClient;
 
+app.use("/payment",payRoute);
+
 // Load necessary configurations and setup wallet and CA client
 async function initialize() {
 	ccp = buildCCPOrg1();
@@ -43,7 +48,7 @@ async function initialize() {
 	wallet = await buildWallet(Wallets, walletPath);
 
 	await enrollAdmin(caClient, wallet, mspOrg1);
-	
+
 }
 
 initialize(); // Initialize the application
@@ -310,6 +315,8 @@ app.post('/issuePolicy', async (req, res) => {
 		const contract = network.getContract(chaincodeName);
 		let result = await contract.evaluateTransaction('GetPolicy', req.body.policy);
 
+		if (!result) return res.json({ message: "Policy not available" });
+
 		var result2 = JSON.parse(prettyJSONString(result.toString()));
 		console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
 		let result3 = await contract.submitTransaction('IssuePolicy', req.body.email + "_" + req.body.policy,
@@ -428,9 +435,19 @@ app.post('/payPremium', async (req, res) => {
 
 		// Get the contract from the network.
 		const contract = network.getContract(chaincodeName);
-		let result = await contract.evaluateTransaction('GetAllAssets');
+		// let result = await contract.evaluateTransaction('GetAllAssets');
+		const policyDetails = await contract.evaluateTransaction('GetPolicy', req.body.policy);
+		const policy = JSON.parse(policyDetails.toString());
 
-		var result2 = JSON.parse(prettyJSONString(result.toString()));
+		if (!policy || !policy.Premium) {
+			return res.status(404).json({ message: "Policy not found or premium not defined" });
+		}
+
+
+		const premiumAmountInCents = parseInt(policy.Premium.replace('$', '').replace(',', '')) * 100;
+
+
+		var result2 = JSON.parse(prettyJSONString(policy.toString()));
 		console.log(result2);
 		console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
 		let result3 = await contract.submitTransaction('PayPremium', 'TXN_' + req.body.email + '_' + req.body.policy);
