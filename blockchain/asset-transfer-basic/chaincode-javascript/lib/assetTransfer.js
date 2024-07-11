@@ -133,7 +133,7 @@ class AssetTransfer extends Contract {
     }
 
 
-    async RegisterInsuranceProvider(ctx, id, name, address, mobile, role, password) {
+    async RegisterInsuranceProvider(ctx, id, name, merchantID, address, mobile, role, password) {
         const exists = await this.AssetExists(ctx, id);
         if (exists) {
             throw new Error(`The asset ${id} already exists`);
@@ -143,6 +143,7 @@ class AssetTransfer extends Contract {
         const asset = {
             ID: id,
             Name: name,
+            MerchantID: merchantID,
             Address: address,
             Mobile: mobile,
             Role:role,
@@ -187,6 +188,14 @@ class AssetTransfer extends Contract {
         const assetJSON = await ctx.stub.getState(id); // get the asset from chaincode state
         if (!assetJSON || assetJSON.length === 0) {
             throw new Error(`The asset ${id} does not exist`);
+        }
+        return assetJSON.toString();
+    }
+
+    async GetInsuranceCompanyInfo(ctx, name) {
+        const assetJSON = await ctx.stub.getState(name); // get the asset from chaincode state
+        if (!assetJSON || assetJSON.length === 0) {
+            throw new Error(`The asset ${name} does not exist`);
         }
         return assetJSON.toString();
     }
@@ -286,9 +295,11 @@ class AssetTransfer extends Contract {
     }
 
     async RegisterPolicy(ctx, id, email, name, duration, premium, hospitals, reimburse_amount) {
-        const exists = await this.AssetExists(ctx, id);
+        const idtemp = "POLICY_"+id+"_"+name;
+        console.log(idtemp);
+        const exists = await this.AssetExists(ctx, idtemp);
         if (exists) {
-            throw new Error(`The asset ${id} already exists`);
+            throw new Error(`The asset ${idtemp} already exists.`);
         }
 
         const asset = {
@@ -332,32 +343,12 @@ class AssetTransfer extends Contract {
         }
     }
 
-    async GetPolicy(ctx,policy) {
-        const iterator = await ctx.stub.getStateByRange('', ''); // Retrieve all assets
-        let policies = null ;
-    
-        // Iterate through the result set and add policies to the array
-        while (true) {
-            const result = await iterator.next();
-    
-            if (result.value && result.value.value.toString()) {
-                //const key = result.value.key;
-                const asset = JSON.parse(result.value.value.toString('utf8'));
-                const key=asset.ID;
-                // Check if the key starts with "POLICY_"
-                if (key === policy) {
-                    policies = asset;
-                    break;
-                }
-            }
-    
-            // If there are no more results, break the loop
-            if (result.done) {
-                await iterator.close();
-                break;
-            }
+    async GetPolicy(ctx, policy) {
+        const assetJSON = await ctx.stub.getState(id); // get the asset from chaincode state
+        if (!assetJSON || assetJSON.length === 0) {
+            throw new Error(`The asset ${id} does not exist`);
         }
-        return JSON.stringify(policies);
+        return JSON.stringify(assetJSON);
     }
     
  

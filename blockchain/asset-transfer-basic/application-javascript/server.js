@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
+const axios = require('axios');
 
 const payRoute = require("./Routes/pay.routes.js");
 
@@ -39,7 +40,7 @@ app.use((req, res, next) => {
 
 let ccp, wallet, gateway, caClient;
 
-app.use("/payment",payRoute);
+app.use("/payment", payRoute);
 
 // Load necessary configurations and setup wallet and CA client
 async function initialize() {
@@ -83,7 +84,7 @@ app.post('/signup', async (req, res) => {
 			const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
 
 			//console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
-			if (req.body.role === 'client') {
+			if (req.body.role === 'Client') {
 				result = await contract.submitTransaction('RegisterClient', req.body.email,
 					req.body.username, req.body.dob, req.body.mobile,
 					req.body.role, hashedPassword);
@@ -91,12 +92,14 @@ app.post('/signup', async (req, res) => {
 				result = await contract.submitTransaction('RegisterHospital', req.body.email,
 					req.body.username, req.body.address, req.body.mobile,
 					req.body.role, hashedPassword);
-			} else {
+			} else if(req.body.role === 'Insurer'){
 				result = await contract.submitTransaction('RegisterInsuranceProvider', req.body.email,
-					req.body.username, req.body.address, req.body.mobile,
+					req.body.username, req.body.merchantID, req.body.address, req.body.mobile,
 					req.body.role, hashedPassword);
 			}
-
+			else {
+				res.status(500).json({message: "Choose a role"});
+			}
 
 			//console.log('*** Result: committed');
 			if (`${result}` !== '') {
@@ -313,7 +316,8 @@ app.post('/issuePolicy', async (req, res) => {
 
 		// Get the contract from the network.
 		const contract = network.getContract(chaincodeName);
-		let result = await contract.evaluateTransaction('GetPolicy', req.body.policy);
+		let result = await contract.evaluateTransaction('GetPolicy', req.body.policy); 
+		res.send(result);
 
 		if (!result) return res.json({ message: "Policy not available" });
 
@@ -417,53 +421,67 @@ app.post('/insurerPolicies', async (req, res) => {
 })
 
 app.post('/payPremium', async (req, res) => {
-	const gateway = new Gateway();
+    const gateway = new Gateway();
+    try {
+        await gateway.connect(ccp, {
+            wallet,
+            identity: req.body.email,
+            discovery: { enabled: true, asLocalhost: true }
+        });
 
-	try {
-		// setup the gateway instance
-		// The user will now be able to create connections to the fabric network and be able to
-		// submit transactions and query. All transactions submitted by this gateway will be
-		// signed by this user using the credentials stored in the wallet.
-		await gateway.connect(ccp, {
-			wallet,
-			identity: req.body.email,
-			discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
-		});
+        const network = await gateway.getNetwork(channelName);
+        const contract = network.getContract(chaincodeName);
 
-		// Build a network instance based on the channel where the smart contract is deployed
-		const network = await gateway.getNetwork(channelName);
+        const policyDetails = await contract.evaluateTransaction('GetPolicy', req.body.policy);
+        const policy = JSON.parse(policyDetails.toString());
 
-		// Get the contract from the network.
-		const contract = network.getContract(chaincodeName);
-		// let result = await contract.evaluateTransaction('GetAllAssets');
-		const policyDetails = await contract.evaluateTransaction('GetPolicy', req.body.policy);
-		const policy = JSON.parse(policyDetails.toString());
+        if (!policy || !policy.Premium) {
+            return res.status(404).json({ message: "Policy not found or premium not defined" });
+        }
 
-		if (!policy || !policy.Premium) {
-			return res.status(404).json({ message: "Policy not found or premium not defined" });
-		}
+        const insurerDetails = await contract.evaluateTransaction('GetInsuranceCompanyInfo', "insurer1@gmail.com");
+        const insurer = JSON.parse(insurerDetails.toString());
 
+        if (!insurer) {
+            return res.status(404).json({ message: "Insurer not found" });
+        }
 
-		const premiumAmountInCents = parseInt(policy.Premium.replace('$', '').replace(',', '')) * 100;
+        const merchantID = "PGTESTPAYUAT86";
+        const premiumAmountInCents = policy.Premium;
 
-
-		var result2 = JSON.parse(prettyJSONString(policy.toString()));
-		console.log(result2);
-		console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
-		let result3 = await contract.submitTransaction('PayPremium', 'TXN_' + req.body.email + '_' + req.body.policy);
-
-		//console.log('*** Result: committed');
-		if (`${result3}` !== '') {
-			console.log(`*** Result: ${prettyJSONString(result3.toString())}`);
-		}
-	} finally {
-		// Disconnect from the gateway when the application is closing
-		// This will close all connections to the network
-		gateway.disconnect();
-	}
-	res.json({ success: true });
+        const response = await axios.get('http://localhost:5000/payment/pay', {
+            params: {
+                merchantID: merchantID,
+                premiumAmountInCents: premiumAmountInCents
+            }
+        });
 
 
+		const redirectInfo = response.data;
+        if (redirectInfo && redirectInfo.url) {
+            // Simulate a redirect in Thunder Client
+            return res.json({ redirectUrl: redirectInfo.url });
+        } else {
+            return res.status(500).json({ message: "Error initiating payment" });
+        }
+
+        if (response.data === "SUCCESS") {
+            let result3 = await contract.submitTransaction('PayPremium', 'TXN_' + req.body.email + '_' + req.body.policy);
+
+            if (`${result3}` !== '') {
+                console.log(`*** Result: ${prettyJSONString(result3.toString())}`);
+            }
+            return res.status(200).json({ message: "Premium Paid." });
+        } else {
+            return res.status(500).json({ message: "Internal Server Error." });
+        }
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Internal Server Error." });
+    } finally {
+        gateway.disconnect();
+    }
 });
 
 
