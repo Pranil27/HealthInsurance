@@ -41,6 +41,8 @@ export const MyPolicies = () => {
     console.log("AAya")
 
     const response = await fetch(`http://localhost:5000/registerPolicy`, {
+            credentials: 'include',
+            Origin:"http://localhost:3000/login",
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -84,15 +86,15 @@ export const MyPolicies = () => {
   const fetchPolicies = async () => {
     console.log(localStorage.getItem('userEmail'))
     await fetch("http://localhost:5000/myPolicies", {
-        // credentials: 'include',
-        // Origin:"http://localhost:3000/login",
-        method: 'POST',
+        credentials: 'include',
+        Origin:"http://localhost:3000/login",
+        method: 'GET',
         headers: {
             'Content-Type': 'application/json'
         },
-        body:JSON.stringify({
-          email:localStorage.getItem('userEmail')
-        })
+        // body:JSON.stringify({
+        //   email:localStorage.getItem('userEmail')
+        // })
     }).then(async (res) => {
         let response = await res.json();
         await setData(response);

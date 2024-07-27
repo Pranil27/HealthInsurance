@@ -1,7 +1,9 @@
 import './../App.css';
+import {useNavigate} from "react-router-dom";
 import { useEffect, useRef, useState } from 'react';
 
 function ClientFrontPage() {
+  const navigate = useNavigate();
   const [selected, setSelected] = useState(null);
   const [data, setData] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -56,18 +58,25 @@ function ClientFrontPage() {
 
   const fetchPolicies = async () => {
     await fetch("http://localhost:5000/getPolicies", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        email: localStorage.getItem('userEmail')
-      })
-    }).then(async (res) => {
-      let response = await res.json();
-      setData(response);
+            credentials: 'include',
+            Origin:"http://localhost:3000/login",
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            // body:JSON.stringify({
+            //     email:localStorage.getItem('userEmail')
+            // })
+        }).then(async (res) => {
+            let response = await res.json();
+            await setData(response);
+            console.log(response);
+        })
+.catch(err => {
+      console.error("Error fetching policies: ", err);
     });
-  };
+};
+
 
   useEffect(() => {
     fetchPolicies();
@@ -84,6 +93,7 @@ function ClientFrontPage() {
 
   return (
     <div className="wrapper">
+       <h1>Welcome to HealthCare!</h1>
       <div className="accordion">
         {data.map((item, i) => (
           <div className="item" key={i}>
@@ -124,6 +134,11 @@ function ClientFrontPage() {
           </div>
         </div>
       )}
+      <div className="side-icon">
+        
+          <i className="fas fa-user" onClick={() => navigate('/client/profile')}></i>
+        
+      </div>
     </div>
   );
 }

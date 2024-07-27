@@ -10,6 +10,7 @@ import InsurerFrontPage from './Components/Insurer/InsurerFrontPage';
 import Payment from './Components/Payment/Payment';
 import MyPolicies from './Components/User/MyPolicies';
 import Layout from './Components/Layouts/Layout.jsx';
+import { Logout } from './Components/LoginForm/Logout.jsx';
 
 
 
@@ -24,9 +25,9 @@ function App() {
           <Route path="/" element={<SignUpForm />} />
           <Route path="/login" element={<LoginForm />} />
           <Route path="/client/dashboard" element={
-            <Layout>
+           
               <ClientFrontPage />
-            </Layout>
+         
           } />
           <Route path="/healthcare/dashboard" element={
             <Layout>
@@ -45,6 +46,7 @@ function App() {
             } />
           <Route path="/client/policies" element={<MyPolicies />} />
           <Route path="/client/payment" element={<Payment />} />
+          <Route path="/logout" element={<Logout />} />
         </Routes>
 
 

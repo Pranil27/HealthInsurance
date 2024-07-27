@@ -14,6 +14,7 @@ export const LoginForm = ({toggleSignUp}) => {
         e.preventDefault();
         const response = await fetch(`http://localhost:5000/login`,{
             method:'POST',
+            credentials:'include',
             headers:{
                 'Content-Type':'application/json'
             },
@@ -27,11 +28,12 @@ export const LoginForm = ({toggleSignUp}) => {
         }
         else {
             
-            localStorage.setItem("userEmail",email);
+            localStorage.setItem("token",json.token);
             //localStorage.setItem("username",username);
             //localStorage.setItem("authToken",json.authToken);
-            console.log(localStorage.getItem("userEmail"));
+            console.log(localStorage.getItem("token"));
             //console.log(localStorage.getItem("username"));
+            console.log(json.role);
             if (json.role === 'client') {
                 navigate('/client/dashboard');
             } else if (json.role === 'Hospital') {

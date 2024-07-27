@@ -2,8 +2,14 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const axios = require('axios');
+const cors = require('cors');
 
-const payRoute = require("./Routes/pay.routes.js");
+//const payRoute = require("./Routes/pay.routes.js");
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
+
+const dotenv = require('dotenv');
+dotenv.config({ path: './.env' });
 
 const { Gateway, Wallets } = require('fabric-network');
 const FabricCAServices = require('fabric-ca-client');
@@ -28,26 +34,44 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
 	extended: true
 }));
+app.use(cookieParser());
 
-app.use((req, res, next) => {
-	res.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
-	res.header(
-		"Access-Control-Allow-Headers",
-		"Origin, X-Requested-Width, Content-Type, Accept"
-	);
-	next();
-})
+// app.use((req, res, next) => {
+// 	res.header("Access-Control-Allow-Origin", "http://localhost:3000");
+// 	res.header("Access-Control-Allow-Credentials", "true");
+//  	res.header(	"Access-Control-Allow-Headers",
+// 		"Origin, X-Requested-Width, Content-Type, Accept"
+// 	);
+// 	next();
+// });
+const corsOptions = {
+	origin: 'http://localhost:3000', // your frontend URL
+	methods: 'GET,POST,PUT,DELETE',
+	credentials: true,
+	allowedHeaders: ['Content-Type', 'Authorization']
+  };
+
+  app.use(cors(corsOptions));
+
+// app.use((req,response,next) => {
+// 	response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+// response.setHeader("Access-Control-Allow-Credentials", "true");
+// response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT");
+// response.setHeader("Access-Control-Allow-Headers", " Origin,Accept, X-Requested-With, Content-Type");
+// next();
+// })
+
 
 let ccp, wallet, gateway, caClient;
 
-app.use("/payment", payRoute);
+///app.use("/payment", payRoute);
 
 // Load necessary configurations and setup wallet and CA client
 async function initialize() {
 	ccp = buildCCPOrg1();
 	caClient = buildCAClient(FabricCAServices, ccp, 'ca.org1.example.com');
 	wallet = await buildWallet(Wallets, walletPath);
-
+    
 	await enrollAdmin(caClient, wallet, mspOrg1);
 
 }
@@ -58,10 +82,10 @@ initialize(); // Initialize the application
 app.post('/signup', async (req, res) => {
 	try {
 		const username = req.body.email;
-		console.log("work");
+		
 		await registerAndEnrollUser(caClient, wallet, mspOrg1, username, 'org1.department1');
 		const gateway = new Gateway();
-
+  //      console.log("work");
 		try {
 			// setup the gateway instance
 			// The user will now be able to create connections to the fabric network and be able to
@@ -82,29 +106,34 @@ app.post('/signup', async (req, res) => {
 
 			// Hash the password
 			const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
-
+            console.log(req.body.role);
 			//console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
-			if (req.body.role === 'Client') {
+			if (req.body.role === 'client') {
+				console.log("aaya");
 				result = await contract.submitTransaction('RegisterClient', req.body.email,
 					req.body.username, req.body.dob, req.body.mobile,
 					req.body.role, hashedPassword);
+				console.log("gaya");
 			} else if (req.body.role === 'Hospital') {
 				result = await contract.submitTransaction('RegisterHospital', req.body.email,
 					req.body.username, req.body.address, req.body.mobile,
 					req.body.role, hashedPassword);
-			} else if(req.body.role === 'Insurer'){
+			
+			} else {
 				result = await contract.submitTransaction('RegisterInsuranceProvider', req.body.email,
 					req.body.username, req.body.merchantID, req.body.address, req.body.mobile,
 					req.body.role, hashedPassword);
+					
 			}
-			else {
-				res.status(500).json({message: "Choose a role"});
-			}
+			// else {
+			// 	res.status(500).json({message: "Choose a role"});
+			// }
 
 			//console.log('*** Result: committed');
 			if (`${result}` !== '') {
 				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 			}
+			
 			res.json({ success: true });
 		} finally {
 			// Disconnect from the gateway when the application is closing
@@ -114,6 +143,7 @@ app.post('/signup', async (req, res) => {
 
 
 	} catch (error) {
+		console.log(error);
 		res.status(500).json({ error: error.message });
 	}
 });
@@ -153,11 +183,19 @@ app.post('/login', async (req, res) => {
 
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 			console.log(result2);
+			console.log(process.env.JWT_SECRET);
 			const passwordMatch = await bcrypt.compare(req.body.password, result2.Password);
 			if (passwordMatch) {
-				res.json({ success: true, role: result2.Role });
+				let token = jwt.sign({email:req.body.email,role:result2.Role},process.env.JWT_SECRET);
+			    console.log(token);
+			    res.cookie("token",token,{
+					httpOnly: true,
+					sameSite: 'none', // Set to 'none' for cross-origin requests
+					secure: true // Require HTTPS in production
+				  });
+				res.json({ success: true, token: token , role:result2.Role});
 			} else {
-				res.json("Incorrect Password");
+				res.status(404).json("Incorrect Password");
 			}
 			//console.log(result2);
 		} finally {
@@ -180,18 +218,19 @@ app.post('/login', async (req, res) => {
 });
 
 
-app.post('/getUserDetails', async (req, res) => {
+app.get('/getUserDetails',isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 
 		try {
+			console.log(req.user.email);
 			// setup the gateway instance
 			// The user will now be able to create connections to the fabric network and be able to
 			// submit transactions and query. All transactions submitted by this gateway will be
 			// signed by this user using the credentials stored in the wallet.
 			await gateway.connect(ccp, {
 				wallet,
-				identity: req.body.email,
+				identity: req.user.email,
 				discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
 			});
 
@@ -201,7 +240,7 @@ app.post('/getUserDetails', async (req, res) => {
 			// Get the contract from the network.
 			const contract = network.getContract(chaincodeName);
 			console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
-			let result = await contract.evaluateTransaction('ReadAsset', req.body.email);
+			let result = await contract.evaluateTransaction('ReadAsset', req.user.email);
 			var result2 = JSON.parse(prettyJSONString(result.toString()));
 
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
@@ -217,7 +256,7 @@ app.post('/getUserDetails', async (req, res) => {
 	}
 });
 
-app.post('/registerPolicy', async (req, res) => {
+app.post('/registerPolicy',isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 
@@ -228,7 +267,7 @@ app.post('/registerPolicy', async (req, res) => {
 			// signed by this user using the credentials stored in the wallet.
 			await gateway.connect(ccp, {
 				wallet,
-				identity: req.body.email,
+				identity: req.user.email,
 				discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
 			});
 
@@ -240,7 +279,7 @@ app.post('/registerPolicy', async (req, res) => {
 			const contract = network.getContract(chaincodeName);
 			console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
 			const result = await contract.submitTransaction('RegisterPolicy',
-				req.body.id, req.body.email,
+				req.body.id, req.user.email,
 				req.body.username, req.body.duration, req.body.premium,
 				req.body.hospitals, req.body.amount);
 			var result2 = JSON.parse(prettyJSONString(result.toString()));
@@ -258,7 +297,7 @@ app.post('/registerPolicy', async (req, res) => {
 	}
 });
 
-app.post('/getPolicies', async (req, res) => {
+app.get('/getPolicies',isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 
@@ -269,7 +308,7 @@ app.post('/getPolicies', async (req, res) => {
 			// signed by this user using the credentials stored in the wallet.
 			await gateway.connect(ccp, {
 				wallet,
-				identity: req.body.email,
+				identity: req.user.email,
 				discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
 			});
 
@@ -285,7 +324,7 @@ app.post('/getPolicies', async (req, res) => {
 			var result2 = JSON.parse(prettyJSONString(result.toString()));
 
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-			//console.log(result2);
+			console.log(result2);
 		} finally {
 			// Disconnect from the gateway when the application is closing
 			// This will close all connections to the network
@@ -297,7 +336,7 @@ app.post('/getPolicies', async (req, res) => {
 	}
 });
 
-app.post('/issuePolicy', async (req, res) => {
+app.post('/issuePolicy',isLoggedIn, async (req, res) => {
 	const gateway = new Gateway();
 
 	try {
@@ -307,7 +346,7 @@ app.post('/issuePolicy', async (req, res) => {
 		// signed by this user using the credentials stored in the wallet.
 		await gateway.connect(ccp, {
 			wallet,
-			identity: req.body.email,
+			identity: req.user.email,
 			discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
 		});
 
@@ -323,8 +362,8 @@ app.post('/issuePolicy', async (req, res) => {
 
 		var result2 = JSON.parse(prettyJSONString(result.toString()));
 		console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
-		let result3 = await contract.submitTransaction('IssuePolicy', req.body.email + "_" + req.body.policy,
-			req.body.email, req.body.policy, req.body.nominee, req.body.aadhar, req.body.relation, req.body.mobile,
+		let result3 = await contract.submitTransaction('IssuePolicy', req.user.email + "_" + req.body.policy,
+			req.user.email, req.body.policy, req.body.nominee, req.body.aadhar, req.body.relation, req.body.mobile,
 			result2.Duration, result2.Premium, 0, parseInt(result2.Duration) * 12, result2.Amount);
 
 		//console.log('*** Result: committed');
@@ -341,7 +380,7 @@ app.post('/issuePolicy', async (req, res) => {
 
 });
 
-app.post('/myPolicies', async (req, res) => {
+app.get('/myPolicies',isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 
@@ -352,7 +391,7 @@ app.post('/myPolicies', async (req, res) => {
 			// signed by this user using the credentials stored in the wallet.
 			await gateway.connect(ccp, {
 				wallet,
-				identity: req.body.email,
+				identity: req.user.email,
 				discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
 			});
 
@@ -363,7 +402,7 @@ app.post('/myPolicies', async (req, res) => {
 			// Get the contract from the network.
 			const contract = network.getContract(chaincodeName);
 			console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
-			let result = await contract.evaluateTransaction('GetMyPolicies', req.body.email);
+			let result = await contract.evaluateTransaction('GetMyPolicies', req.user.email);
 
 			var result2 = JSON.parse(prettyJSONString(result.toString()));
 
@@ -381,7 +420,7 @@ app.post('/myPolicies', async (req, res) => {
 })
 
 
-app.post('/insurerPolicies', async (req, res) => {
+app.post('/insurerPolicies',isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 
@@ -392,7 +431,7 @@ app.post('/insurerPolicies', async (req, res) => {
 			// signed by this user using the credentials stored in the wallet.
 			await gateway.connect(ccp, {
 				wallet,
-				identity: req.body.email,
+				identity: req.user.email,
 				discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
 			});
 
@@ -403,7 +442,7 @@ app.post('/insurerPolicies', async (req, res) => {
 			// Get the contract from the network.
 			const contract = network.getContract(chaincodeName);
 			console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
-			let result = await contract.evaluateTransaction('GetInsurerPolicies', req.body.email);
+			let result = await contract.evaluateTransaction('GetInsurerPolicies', req.user.email);
 
 			var result2 = JSON.parse(prettyJSONString(result.toString()));
 
@@ -420,12 +459,12 @@ app.post('/insurerPolicies', async (req, res) => {
 	}
 })
 
-app.post('/payPremium', async (req, res) => {
+app.post('/payPremium',isLoggedIn, async (req, res) => {
     const gateway = new Gateway();
     try {
         await gateway.connect(ccp, {
             wallet,
-            identity: req.body.email,
+            identity: req.user.email,
             discovery: { enabled: true, asLocalhost: true }
         });
 
@@ -484,6 +523,28 @@ app.post('/payPremium', async (req, res) => {
     }
 });
 
+app.get('/logout',async(req,res) => {
+	res.cookie("token","",{
+		httpOnly: true,
+		sameSite: 'none', // Set to 'none' for cross-origin requests
+		secure: true // Require HTTPS in production
+	  });
+	res.status(204).json({message:"Logged out!"});
+});
+
+
+function isLoggedIn(req,res,next){
+	var token = req.cookies.token;
+	console.log(req.cookies);
+	if(token === undefined || token === "") {res.status(401).send("not found");return;}
+	else{
+	var decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log(decoded.email);
+	console.log(decoded.role);
+	req.user = decoded;
+	}
+	next();
+}
 
 // Start the server
 app.listen(5000, () => {

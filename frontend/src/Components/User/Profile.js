@@ -4,10 +4,14 @@ import { Link } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 //import Loader from '../layout/Loader/Loader';
 import {useNavigate} from 'react-router-dom'
+import Cookies from 'js-cookie';
+import { useCookies } from 'react-cookie';
 import "./Profile.css"
 
 const Profile = () => {
-    // const history= useNavigate();
+    const navigate= useNavigate();
+    const [cookie, setCookie, removeCookie] = useCookies();
+
     // const {user,loading,isAuthenticated} = useSelector(state=>state.user);
     // useEffect(()=>{
     //     if(isAuthenticated === false){
@@ -18,19 +22,20 @@ const Profile = () => {
     const [userDetails, setUserDetails] = useState({"result2":{}})
 
     const fetchUserDetails = async () => {
-        console.log(localStorage.getItem('userEmail'))
+        //console.log(localStorage.getItem('userEmail'))
         await fetch("http://localhost:5000/getUserDetails", {
-            // credentials: 'include',
-            // Origin:"http://localhost:3000/login",
-            method: 'POST',
+            credentials: 'include',
+            Origin:"http://localhost:3000/login",
+            method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body:JSON.stringify({
-                email:localStorage.getItem('userEmail')
-            })
+            // body:JSON.stringify({
+            //     email:localStorage.getItem('userEmail')
+            // })
         }).then(async (res) => {
             let response = await res.json();
+            console.log(cookie)
             await setUserDetails(response);
             console.log(response);
         })
@@ -82,7 +87,7 @@ const Profile = () => {
  
                  <div>
                      <Link to="/client/policies">My Policies</Link>
-                     <Link to="/password/update">Change Password</Link>
+                     <button onClick={() => { removeCookie('token', { path: '/', domain: 'localhost' }); navigate('\login')}} >Logout</button>
                  </div>
  
              </div>
