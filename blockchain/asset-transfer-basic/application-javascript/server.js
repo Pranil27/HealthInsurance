@@ -4,12 +4,13 @@ const bcrypt = require('bcrypt');
 const axios = require('axios');
 const cors = require('cors');
 
-//const payRoute = require("./Routes/pay.routes.js");
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 
 const dotenv = require('dotenv');
 dotenv.config({ path: './.env' });
+
+const stripe = require('stripe')('sk_test_51PTVxBP9R43T6Z9PC1WyREOJy7nikD60OXjcoI9VUoPdTtHcgRAZKoX7WWV9AqFLCwEsOqmrkYPtWkezvdr2rcYj00vIllbO2h');
 
 const { Gateway, Wallets } = require('fabric-network');
 const FabricCAServices = require('fabric-ca-client');
@@ -17,6 +18,8 @@ const path = require('path');
 const { buildCAClient, registerAndEnrollUser, enrollAdmin } = require('../../test-application/javascript/CAUtil.js');
 const { buildCCPOrg1, buildWallet } = require('../../test-application/javascript/AppUtil.js');
 const { sha256 } = require('@hyperledger/fabric-gateway/dist/hash/hashes.js');
+
+
 
 const channelName = process.env.CHANNEL_NAME || 'mychannel';
 const chaincodeName = process.env.CHAINCODE_NAME || 'basic';
@@ -49,9 +52,9 @@ const corsOptions = {
 	methods: 'GET,POST,PUT,DELETE',
 	credentials: true,
 	allowedHeaders: ['Content-Type', 'Authorization']
-  };
+};
 
-  app.use(cors(corsOptions));
+app.use(cors(corsOptions));
 
 // app.use((req,response,next) => {
 // 	response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
@@ -64,14 +67,12 @@ const corsOptions = {
 
 let ccp, wallet, gateway, caClient;
 
-///app.use("/payment", payRoute);
-
 // Load necessary configurations and setup wallet and CA client
 async function initialize() {
 	ccp = buildCCPOrg1();
 	caClient = buildCAClient(FabricCAServices, ccp, 'ca.org1.example.com');
 	wallet = await buildWallet(Wallets, walletPath);
-    
+
 	await enrollAdmin(caClient, wallet, mspOrg1);
 
 }
@@ -82,10 +83,10 @@ initialize(); // Initialize the application
 app.post('/signup', async (req, res) => {
 	try {
 		const username = req.body.email;
-		
+
 		await registerAndEnrollUser(caClient, wallet, mspOrg1, username, 'org1.department1');
 		const gateway = new Gateway();
-  //      console.log("work");
+		//      console.log("work");
 		try {
 			// setup the gateway instance
 			// The user will now be able to create connections to the fabric network and be able to
@@ -106,7 +107,7 @@ app.post('/signup', async (req, res) => {
 
 			// Hash the password
 			const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
-            console.log(req.body.role);
+			console.log(req.body.role);
 			//console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
 			if (req.body.role === 'client') {
 				console.log("aaya");
@@ -118,12 +119,12 @@ app.post('/signup', async (req, res) => {
 				result = await contract.submitTransaction('RegisterHospital', req.body.email,
 					req.body.username, req.body.address, req.body.mobile,
 					req.body.role, hashedPassword);
-			
+
 			} else {
 				result = await contract.submitTransaction('RegisterInsuranceProvider', req.body.email,
 					req.body.username, req.body.merchantID, req.body.address, req.body.mobile,
 					req.body.role, hashedPassword);
-					
+
 			}
 			// else {
 			// 	res.status(500).json({message: "Choose a role"});
@@ -133,7 +134,7 @@ app.post('/signup', async (req, res) => {
 			if (`${result}` !== '') {
 				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 			}
-			
+
 			res.json({ success: true });
 		} finally {
 			// Disconnect from the gateway when the application is closing
@@ -186,14 +187,14 @@ app.post('/login', async (req, res) => {
 			console.log(process.env.JWT_SECRET);
 			const passwordMatch = await bcrypt.compare(req.body.password, result2.Password);
 			if (passwordMatch) {
-				let token = jwt.sign({email:req.body.email,role:result2.Role},process.env.JWT_SECRET);
-			    console.log(token);
-			    res.cookie("token",token,{
+				let token = jwt.sign({ email: req.body.email, role: result2.Role }, process.env.JWT_SECRET);
+				console.log(token);
+				res.cookie("token", token, {
 					httpOnly: true,
 					sameSite: 'none', // Set to 'none' for cross-origin requests
 					secure: true // Require HTTPS in production
-				  });
-				res.json({ success: true, token: token , role:result2.Role});
+				});
+				res.json({ success: true, token: token, role: result2.Role });
 			} else {
 				res.status(404).json("Incorrect Password");
 			}
@@ -218,7 +219,7 @@ app.post('/login', async (req, res) => {
 });
 
 
-app.get('/getUserDetails',isLoggedIn, async (req, res) => {
+app.get('/getUserDetails', isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 
@@ -256,7 +257,7 @@ app.get('/getUserDetails',isLoggedIn, async (req, res) => {
 	}
 });
 
-app.post('/registerPolicy',isLoggedIn, async (req, res) => {
+app.post('/registerPolicy', isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 
@@ -297,7 +298,7 @@ app.post('/registerPolicy',isLoggedIn, async (req, res) => {
 	}
 });
 
-app.get('/getPolicies',isLoggedIn, async (req, res) => {
+app.get('/getPolicies', isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 
@@ -336,7 +337,7 @@ app.get('/getPolicies',isLoggedIn, async (req, res) => {
 	}
 });
 
-app.post('/issuePolicy',isLoggedIn, async (req, res) => {
+app.post('/issuePolicy', isLoggedIn, async (req, res) => {
 	const gateway = new Gateway();
 
 	try {
@@ -355,8 +356,8 @@ app.post('/issuePolicy',isLoggedIn, async (req, res) => {
 
 		// Get the contract from the network.
 		const contract = network.getContract(chaincodeName);
-		let result = await contract.evaluateTransaction('GetPolicy', req.body.policy); 
-		res.send(result);
+		let result = await contract.evaluateTransaction('GetPolicy', req.body.policy);
+		// res.send(result);
 
 		if (!result) return res.json({ message: "Policy not available" });
 
@@ -380,7 +381,7 @@ app.post('/issuePolicy',isLoggedIn, async (req, res) => {
 
 });
 
-app.get('/myPolicies',isLoggedIn, async (req, res) => {
+app.get('/myPolicies', isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 
@@ -419,8 +420,7 @@ app.get('/myPolicies',isLoggedIn, async (req, res) => {
 	}
 })
 
-
-app.post('/insurerPolicies',isLoggedIn, async (req, res) => {
+app.post('/insurerPolicies', isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 
@@ -459,89 +459,168 @@ app.post('/insurerPolicies',isLoggedIn, async (req, res) => {
 	}
 })
 
-app.post('/payPremium',isLoggedIn, async (req, res) => {
-    const gateway = new Gateway();
+async function callSmartContract(paymentNumber, req) {
     try {
-        await gateway.connect(ccp, {
-            wallet,
-            identity: req.user.email,
-            discovery: { enabled: true, asLocalhost: true }
-        });
+        const gateway = new Gateway();
 
-        const network = await gateway.getNetwork(channelName);
-        const contract = network.getContract(chaincodeName);
+        try {
+            // Setup the gateway instance
+            await gateway.connect(ccp, {
+                wallet,
+                identity: "policyholder1@gmail.com", // Ensure `req.user.email` is available or passed as a parameter
+                discovery: { enabled: true, asLocalhost: true }
+            });
 
-        const policyDetails = await contract.evaluateTransaction('GetPolicy', req.body.policy);
-        const policy = JSON.parse(policyDetails.toString());
+            // Build a network instance based on the channel where the smart contract is deployed
+            const network = await gateway.getNetwork(channelName);
 
-        if (!policy || !policy.Premium) {
-            return res.status(404).json({ message: "Policy not found or premium not defined" });
+            // Get the contract from the network
+            const contract = network.getContract(chaincodeName);
+            console.log('\n--> Submit Transaction: logPayment');
+            const result = await contract.submitTransaction('logPayment', paymentNumber);
+            console.log('Transaction has been submitted');
+            console.log(result.toString());
+
+            // Return the result back to the caller
+            return { success: true, result: result.toString() };
+
+        } finally {
+            // Disconnect from the gateway
+            gateway.disconnect();
         }
-
-        const insurerDetails = await contract.evaluateTransaction('GetInsuranceCompanyInfo', "insurer1@gmail.com");
-        const insurer = JSON.parse(insurerDetails.toString());
-
-        if (!insurer) {
-            return res.status(404).json({ message: "Insurer not found" });
-        }
-
-        const merchantID = "PGTESTPAYUAT86";
-        const premiumAmountInCents = policy.Premium;
-
-        const response = await axios.get('http://localhost:5000/payment/pay', {
-            params: {
-                merchantID: merchantID,
-                premiumAmountInCents: premiumAmountInCents
-            }
-        });
-
-
-		const redirectInfo = response.data;
-        if (redirectInfo && redirectInfo.url) {
-            // Simulate a redirect in Thunder Client
-            return res.json({ redirectUrl: redirectInfo.url });
-        } else {
-            return res.status(500).json({ message: "Error initiating payment" });
-        }
-
-        if (response.data === "SUCCESS") {
-            let result3 = await contract.submitTransaction('PayPremium', 'TXN_' + req.body.email + '_' + req.body.policy);
-
-            if (`${result3}` !== '') {
-                console.log(`*** Result: ${prettyJSONString(result3.toString())}`);
-            }
-            return res.status(200).json({ message: "Premium Paid." });
-        } else {
-            return res.status(500).json({ message: "Internal Server Error." });
-        }
-
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: "Internal Server Error." });
-    } finally {
-        gateway.disconnect();
+        // Return error back to the caller
+        throw new Error(error.message);
+    }
+}
+
+
+
+//Route to create a payment intent
+app.post('/create-payment-intent', async (req, res) => {
+    try {
+        let { amount } = req.body; // amount should be in cents
+		amount = Number(amount);
+		if (!amount) {
+            throw new Error('Amount is required');
+        }
+        if (typeof amount !== 'number' || amount <= 0) {
+            throw new Error('Amount must be a positive number');
+        }
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount,
+            currency: 'usd',
+        });
+        res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error) {
+		console.log(error.message)
+        res.status(500).json({ "message" : "hello" });
     }
 });
 
-app.get('/logout',async(req,res) => {
-	res.cookie("token","",{
+app.post('/verify-payment', async (req, res) => {
+	const { paymentIntentId } = req.body;
+	try {
+		const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+		if (paymentIntent.status === 'succeeded') {
+			const paymentNumber = 42;
+			await callSmartContract(paymentNumber, req, res);
+
+			res.send('Payment verified and smart contract called');
+		}
+		else {
+			res.status(400).send('Payment not successful');
+		}
+	} catch (error) {
+		console.error(error);
+		res.status(500).send('Error verifying payment');
+	}
+})
+
+// app.post('/payPremium',isLoggedIn, async (req, res) => {
+//     const gateway = new Gateway();
+//     try {
+//         await gateway.connect(ccp, {
+//             wallet,
+//             identity: req.user.email,
+//             discovery: { enabled: true, asLocalhost: true }
+//         });
+
+//         const network = await gateway.getNetwork(channelName);
+//         const contract = network.getContract(chaincodeName);
+
+//         const policyDetails = await contract.evaluateTransaction('GetPolicy', req.body.policy);
+//         const policy = JSON.parse(policyDetails.toString());
+
+//         if (!policy || !policy.Premium) {
+//             return res.status(404).json({ message: "Policy not found or premium not defined" });
+//         }
+
+//         const insurerDetails = await contract.evaluateTransaction('GetInsuranceCompanyInfo', "insurer1@gmail.com");
+//         const insurer = JSON.parse(insurerDetails.toString());
+
+//         if (!insurer) {
+//             return res.status(404).json({ message: "Insurer not found" });
+//         }
+
+//         const merchantID = "PGTESTPAYUAT86";
+//         const premiumAmountInCents = policy.Premium;
+
+//         const response = await axios.get('http://localhost:5000/payment/pay', {
+//             params: {
+//                 merchantID: merchantID,
+//                 premiumAmountInCents: premiumAmountInCents
+//             }
+//         });
+
+
+// 		const redirectInfo = response.data;
+//         if (redirectInfo && redirectInfo.url) {
+//             // Simulate a redirect in Thunder Client
+//             return res.json({ redirectUrl: redirectInfo.url });
+//         } else {
+//             return res.status(500).json({ message: "Error initiating payment" });
+//         }
+
+//         if (response.data === "SUCCESS") {
+//             let result3 = await contract.submitTransaction('PayPremium', 'TXN_' + req.body.email + '_' + req.body.policy);
+
+//             if (`${result3}` !== '') {
+//                 console.log(`*** Result: ${prettyJSONString(result3.toString())}`);
+//             }
+//             return res.status(200).json({ message: "Premium Paid." });
+//         } else {
+//             return res.status(500).json({ message: "Internal Server Error." });
+//         }
+
+//     } catch (error) {
+//         console.error(error);
+//         return res.status(500).json({ message: "Internal Server Error." });
+//     } finally {
+//         gateway.disconnect();
+//     }
+// });
+
+app.get('/logout', async (req, res) => {
+	res.cookie("token", "", {
 		httpOnly: true,
 		sameSite: 'none', // Set to 'none' for cross-origin requests
 		secure: true // Require HTTPS in production
-	  });
-	res.status(204).json({message:"Logged out!"});
+	});
+	res.status(204).json({ message: "Logged out!" });
 });
 
 
-function isLoggedIn(req,res,next){
+function isLoggedIn(req, res, next) {
 	var token = req.cookies.token;
 	console.log(req.cookies);
-	if(token === undefined || token === "") {res.status(401).send("not found");return;}
-	else{
-	var decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log(decoded.email);
-	console.log(decoded.role);
-	req.user = decoded;
+	if (token === undefined || token === "") { res.status(401).send("not found"); return; }
+	else {
+		var decoded = jwt.verify(token, process.env.JWT_SECRET);
+		console.log(decoded.email);
+		console.log(decoded.role);
+		req.user = decoded;
 	}
 	next();
 }

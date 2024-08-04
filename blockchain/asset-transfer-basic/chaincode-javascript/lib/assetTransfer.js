@@ -343,7 +343,7 @@ class AssetTransfer extends Contract {
         }
     }
 
-    async GetPolicy(ctx, policy) {
+    async GetPolicy(ctx, id) {
         const assetJSON = await ctx.stub.getState(id); // get the asset from chaincode state
         if (!assetJSON || assetJSON.length === 0) {
             throw new Error(`The asset ${id} does not exist`);
@@ -513,9 +513,11 @@ class AssetTransfer extends Contract {
     
     
     
+    async logPayment(ctx, paymentNumber) {
+        console.log(`Payment Number: ${paymentNumber}`);
+        return `Logged payment number: ${paymentNumber}`;
+    }
     
-
-
 
     async Refund(ctx, client_id, policy_id) {
         const exists = await this.AssetExists(ctx, client_id);

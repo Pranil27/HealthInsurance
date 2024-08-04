@@ -3,11 +3,14 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import StripeProvider from './Components/Payment/StripeProvider'
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <StripeProvider> {/* Wrap App with StripeProvider */}
+      <App />
+    </StripeProvider>
   </React.StrictMode>
 );
 
