@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import './App.css';
-import ClientFrontPage from './Components/ClientFrontPage';
+import ClientFrontPage from './Components/User/ClientFrontPage.js';
 import { LoginForm } from './Components/LoginForm/LoginForm';
 import { SignUpForm } from './Components/SignUpForm/SignUpForm';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
@@ -25,19 +25,13 @@ function App() {
           <Route path="/" element={<SignUpForm />} />
           <Route path="/login" element={<LoginForm />} />
           <Route path="/client/dashboard" element={
-           
-              <ClientFrontPage />
-         
+            <ClientFrontPage />
           } />
           <Route path="/healthcare/dashboard" element={
-            <Layout>
               <HealthCareFrontPage />
-            </Layout>
           } />
           <Route path="/insurer/dashboard" element={
-            <Layout>
               <InsurerFrontPage />
-            </Layout>
           } />
           <Route path="/client/profile" element={
             <Layout>

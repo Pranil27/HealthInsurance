@@ -19,6 +19,7 @@
         "axios": "^1.7.2",
         "bcrypt": "^5.1.1",
         "body-parser": "^1.20.2",
+        "circomlib": "^2.0.5",
         "cookie": "^0.6.0",
         "cookie-parser": "^1.4.6",
         "cors": "^2.8.5",
@@ -30,6 +31,7 @@
         "jsonwebtoken": "^9.0.2",
         "nodemon": "^3.1.4",
         "sha256": "^0.2.0",
+        "snarkjs": "^0.7.5",
         "uniqid": "^5.4.0"
     },
     "devDependencies": {

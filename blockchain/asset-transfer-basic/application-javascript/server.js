@@ -24,6 +24,30 @@ const chaincodeName = process.env.CHAINCODE_NAME || 'basic';
 const mspOrg1 = 'Org1MSP';
 const walletPath = path.join(__dirname, 'wallet');
 
+const snarkjs = require("snarkjs");
+const fs = require("fs");
+
+// Load or generate proving/verification keys
+const provingKey = fs.readFileSync('circuit_final.zkey');
+const verificationKey = JSON.parse(fs.readFileSync('verification_key.json', 'utf8'));
+
+
+// Generate proof using snarkjs
+async function generateProof(inputData) {
+	console.log(inputData);
+    const { proof, publicSignals } = await snarkjs.groth16.fullProve(inputData, './circuit_js/circuit.wasm', provingKey);
+    return { proof, publicSignals };
+}
+
+// Verify proof
+async function verifyProof(proof, publicSignals) {
+    const verificationResult = await snarkjs.groth16.verify(verificationKey, publicSignals, proof);
+    return verificationResult;
+}
+
+
+
+
 function prettyJSONString(inputString) {
 	return JSON.stringify(JSON.parse(inputString), null, 2);
 }
@@ -80,73 +104,83 @@ initialize(); // Initialize the application
 
 // Signup endpoint for registering a new user
 app.post('/signup', async (req, res) => {
-	try {
-		const username = req.body.email;
-		
-		await registerAndEnrollUser(caClient, wallet, mspOrg1, username, 'org1.department1');
-		const gateway = new Gateway();
-  //      console.log("work");
-		try {
-			// setup the gateway instance
-			// The user will now be able to create connections to the fabric network and be able to
-			// submit transactions and query. All transactions submitted by this gateway will be
-			// signed by this user using the credentials stored in the wallet.
-			await gateway.connect(ccp, {
-				wallet,
-				identity: username,
-				discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
-			});
+    try {
+        const username = req.body.email;
+        const role = req.body.role;
 
-			// Build a network instance based on the channel where the smart contract is deployed
-			const network = await gateway.getNetwork(channelName);
+        // Register and enroll the user with the role attribute
+        await registerAndEnrollUser(caClient, wallet, mspOrg1, username, 'org1.department1', role);
 
-			// Get the contract from the network.
-			const contract = network.getContract(chaincodeName);
-			const saltRounds = 10;
+        const gateway = new Gateway();
 
-			// Hash the password
-			const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
-            console.log(req.body.role);
-			//console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, color, owner, size, and appraisedValue arguments');
-			if (req.body.role === 'client') {
-				console.log("aaya");
-				result = await contract.submitTransaction('RegisterClient', req.body.email,
-					req.body.username, req.body.dob, req.body.mobile,
-					req.body.role, hashedPassword);
-				console.log("gaya");
-			} else if (req.body.role === 'Hospital') {
-				result = await contract.submitTransaction('RegisterHospital', req.body.email,
-					req.body.username, req.body.address, req.body.mobile,
-					req.body.role, hashedPassword);
-			
-			} else {
-				result = await contract.submitTransaction('RegisterInsuranceProvider', req.body.email,
-					req.body.username, req.body.merchantID, req.body.address, req.body.mobile,
-					req.body.role, hashedPassword);
-					
-			}
-			// else {
-			// 	res.status(500).json({message: "Choose a role"});
-			// }
+        try {
+            // Connect to the gateway
+            await gateway.connect(ccp, {
+                wallet,
+                identity: username,
+                discovery: { enabled: true, asLocalhost: true }
+            });
 
-			//console.log('*** Result: committed');
-			if (`${result}` !== '') {
-				console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-			}
-			
-			res.json({ success: true });
-		} finally {
-			// Disconnect from the gateway when the application is closing
-			// This will close all connections to the network
-			gateway.disconnect();
-		}
+            // Get the network and contract
+            const network = await gateway.getNetwork(channelName);
+            const contract = network.getContract(chaincodeName);
+
+            const saltRounds = 10;
+            const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+
+            // Register the user in the ledger with the role and hashed password
+            let result;
+            if (role === 'client') {
+                result = await contract.submitTransaction('RegisterClient', req.body.email, 
+                    req.body.username, req.body.dob, req.body.mobile, 
+                    req.body.role, hashedPassword);
+            } else if (role === 'Hospital') {
+                result = await contract.submitTransaction('RegisterHospital', req.body.email, 
+                    req.body.username, req.body.address, req.body.mobile, 
+                    req.body.role, hashedPassword);
+            } else {
+                result = await contract.submitTransaction('RegisterInsuranceProvider', req.body.email, 
+                    req.body.username, req.body.address, req.body.mobile, 
+                    req.body.role, hashedPassword);
+            }
+
+            // Log the result
+            if (`${result}` !== '') {
+                console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+            }
+			const inputData = { a: 3, b: 5 };
+
+		console.log(provingKey);
+		console.log(verificationKey);	
+    // Generate proof
+    const { proof, publicSignals } = await generateProof(inputData);
+	console.log(proof);
+	console.log(`Public Signal: ${publicSignals}`);
 
 
-	} catch (error) {
-		console.log(error);
-		res.status(500).json({ error: error.message });
-	}
+    // Verify proof
+    const isValid = await verifyProof(proof, publicSignals);
+	console.log(isValid);
+    
+    if (isValid) {
+        // Submit transaction to Fabric
+		res.json({ success: true });
+    } else {
+        return res.status(400).send('Invalid proof');
+    }
+
+            
+
+        } finally {
+            // Disconnect from the gateway
+            gateway.disconnect();
+        }
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
+
 
 // Login endpoint for authenticating and authorizing the user
 app.post('/login', async (req, res) => {
@@ -155,64 +189,74 @@ app.post('/login', async (req, res) => {
 		console.log(`Looking for user identity: ${username}`);
 		const userIdentity = await wallet.get(username);
 
+		// Check if user exists in the wallet
 		if (!userIdentity) {
 			res.status(401).json("User not found. Please register first!");
 			return;
 		}
+
 		const gateway = new Gateway();
 
 		try {
-			// setup the gateway instance
-			// The user will now be able to create connections to the fabric network and be able to
-			// submit transactions and query. All transactions submitted by this gateway will be
-			// signed by this user using the credentials stored in the wallet.
+			// Connect to the Fabric network as the user
 			await gateway.connect(ccp, {
 				wallet,
 				identity: username,
-				discovery: { enabled: true, asLocalhost: true } // using asLocalhost as this gateway is using a fabric network deployed locally
+				discovery: { enabled: true, asLocalhost: true } // use asLocalhost for local Fabric network
 			});
 
-			// Build a network instance based on the channel where the smart contract is deployed
+			// Get the network and contract
 			const network = await gateway.getNetwork(channelName);
-
-			// Get the contract from the network.
 			const contract = network.getContract(chaincodeName);
-			console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
-			let result = await contract.evaluateTransaction('ReadAsset', req.body.email);
-			var result2 = JSON.parse(prettyJSONString(result.toString()));
 
-			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			console.log(`name of chaincode: ${chaincodeName}`);
+
+			// Get role from user's certificate
+			const clientIdentity = gateway.getIdentity();
+			console.log(`name of identity: ${clientIdentity}`);
+			const userRoleFromCert = clientIdentity.getAttributeValue('role');
+			console.log(`Role from certificate: ${userRoleFromCert}`);
+
+			// Get user data (including role) from the ledger
+			console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
+			const result = await contract.evaluateTransaction('ReadAsset', req.body.email);
+			const result2 = JSON.parse(prettyJSONString(result.toString()));
+
+			// Log the result from the ledger
+			console.log(`*** Result from ledger: ${prettyJSONString(result.toString())}`);
 			console.log(result2);
-			console.log(process.env.JWT_SECRET);
+
+			// Check if the provided password matches the stored password (from ledger)
 			const passwordMatch = await bcrypt.compare(req.body.password, result2.Password);
 			if (passwordMatch) {
-				let token = jwt.sign({email:req.body.email,role:result2.Role},process.env.JWT_SECRET);
-			    console.log(token);
-			    res.cookie("token",token,{
+				// Generate JWT token
+				const token = jwt.sign({ email: req.body.email, role: result2.Role }, process.env.JWT_SECRET);
+				console.log(`Generated JWT: ${token}`);
+
+				// Set the JWT as a cookie
+				res.cookie("token", token, {
 					httpOnly: true,
 					sameSite: 'none', // Set to 'none' for cross-origin requests
 					secure: true // Require HTTPS in production
-				  });
-				res.json({ success: true, token: token , role:result2.Role});
+				});
+
+				// Print role information to the console
+				console.log(`User role from ledger: ${result2.Role}`);
+				
+				// Send success response with token and role
+				res.json({ success: true, token: token, role: result2.Role });
 			} else {
+				// Incorrect password response
 				res.status(404).json("Incorrect Password");
 			}
-			//console.log(result2);
+
 		} finally {
-			// Disconnect from the gateway when the application is closing
-			// This will close all connections to the network
+			// Disconnect from the gateway
 			gateway.disconnect();
 		}
-		// console.log(result2);
 
-		// if (!passwordMatch) {
-		//     throw new Error('Invalid password');
-		// }
-		// if(!result2.ID && result2.ID === username )
-		// res.json({success:true,role:result2.Role});
-		// else
-		// res.json("Incorrect Password");
 	} catch (error) {
+		// Handle errors
 		res.status(500).json({ error: error.message });
 	}
 });
@@ -291,13 +335,13 @@ app.post('/registerPolicy',isLoggedIn, async (req, res) => {
 			// This will close all connections to the network
 			gateway.disconnect();
 		}
-		res.json(result2);
+		res.json({result2,success:"true"});
 	} catch (error) {
 		res.status(500).json({ error: error.message });
 	}
 });
 
-app.get('/getPolicies',isLoggedIn, async (req, res) => {
+app.get('/policies',isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 
@@ -319,12 +363,12 @@ app.get('/getPolicies',isLoggedIn, async (req, res) => {
 			// Get the contract from the network.
 			const contract = network.getContract(chaincodeName);
 			console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
+			//let result = await contract.evaluateTransaction('GetMyPolicies', req.user.email);
 			let result = await contract.evaluateTransaction('GetAllPolicies');
-
 			var result2 = JSON.parse(prettyJSONString(result.toString()));
 
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
-			console.log(result2);
+			//console.log(result2);
 		} finally {
 			// Disconnect from the gateway when the application is closing
 			// This will close all connections to the network
@@ -334,7 +378,7 @@ app.get('/getPolicies',isLoggedIn, async (req, res) => {
 	} catch (error) {
 		res.status(500).json({ error: error.message });
 	}
-});
+})
 
 app.post('/issuePolicy',isLoggedIn, async (req, res) => {
 	const gateway = new Gateway();
@@ -403,7 +447,7 @@ app.get('/myPolicies',isLoggedIn, async (req, res) => {
 			const contract = network.getContract(chaincodeName);
 			console.log('\n--> Evaluate Transaction: ReadAsset, function returns an asset with a given assetID');
 			let result = await contract.evaluateTransaction('GetMyPolicies', req.user.email);
-
+			//let result = await contract.evaluateTransaction('GetAllPolicies');
 			var result2 = JSON.parse(prettyJSONString(result.toString()));
 
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
@@ -420,7 +464,7 @@ app.get('/myPolicies',isLoggedIn, async (req, res) => {
 })
 
 
-app.post('/insurerPolicies',isLoggedIn, async (req, res) => {
+app.get('/insurerPolicies',isLoggedIn, async (req, res) => {
 	try {
 		const gateway = new Gateway();
 

@@ -133,7 +133,7 @@ class AssetTransfer extends Contract {
     }
 
 
-    async RegisterInsuranceProvider(ctx, id, name, merchantID, address, mobile, role, password) {
+    async RegisterInsuranceProvider(ctx, id, name, address, mobile, role, password) {
         const exists = await this.AssetExists(ctx, id);
         if (exists) {
             throw new Error(`The asset ${id} already exists`);
@@ -143,7 +143,7 @@ class AssetTransfer extends Contract {
         const asset = {
             ID: id,
             Name: name,
-            MerchantID: merchantID,
+            //MerchantID: merchantID,
             Address: address,
             Mobile: mobile,
             Role:role,
@@ -557,6 +557,14 @@ class AssetTransfer extends Contract {
 
     //Hospital
     //Request Medical Service
+
+    // async readAssetPrivate(ctx,id){
+    //     const assetJSON = await ctx.stub.getState(id); // get the asset from chaincode state
+    //     if (!assetJSON || assetJSON.length === 0) {
+    //         throw new Error(`The asset ${id} does not exist`);
+    //     }
+    //     return assetJSON.toString();
+    // }
     
 
 }

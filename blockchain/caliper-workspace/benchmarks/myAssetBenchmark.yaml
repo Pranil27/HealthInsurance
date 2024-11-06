@@ -1,3 +1,113 @@
+# test:
+#     name: basic-contract-benchmark
+#     description: test benchmark
+#     workers:
+#       number: 2
+#     rounds: 
+#       - label: major_project
+#         description: Read asset benchmark
+#         txDuration: 30
+#         # txNumber: 100
+#         rateControl:
+#           type: fixed-load
+#           opts:
+#             transactionLoad: 2
+#         workload:
+#           module: workload/readAsset.js
+#           arguments:
+#             assets: 20
+#             contractId: basic
+     
+# test:
+#   name: basic-contract-benchmark
+#   description: Benchmark for testing asset read performance, including detailed logging and monitoring.
+#   workers:
+#     number: 2  # Number of workers to simulate concurrent users
+#   rounds:
+#     - label: major_project
+#       description: Read asset benchmark with logging of computation time and performance monitoring.
+#       #txDuration: 30  # The duration for which the test will run (in seconds)
+#       txNumber: 100  # Total number of transactions to execute
+#       rateControl:
+#         type: fixed-load  # Control the rate of transaction submission
+#         opts:
+#           transactionLoad: 2  # Number of transactions per second
+#       workload:
+#         module: workload/readAsset.js  # Path to the workload script
+#         arguments:
+#           assets: 20  # The asset ID base (used for generating asset IDs)
+#           contractId: basic  # The contract ID (chaincode to invoke)
+
+# monitor:
+#   type: local  # Use local monitoring for capturing system performance metrics (CPU, Memory, etc.)
+#   include:
+#     - cpu  # Monitor CPU usage
+#     - memory  # Monitor Memory usage
+#     - network  # Monitor network usage
+#     - process  # Monitor process-level performance data
+
+# logging:
+#   level: debug  # Set the logging level to 'debug' for detailed output
+#   file: caliper-logs.log  # Output log file for all the detailed logs
+#   console: true  # Enable console logging as well
+
+# # Optional: Report settings to customize the output format of the benchmark results
+# report:
+#   formats:
+#     - "html"  # Output in HTML format for easy viewing
+#     - "json"  # Output in JSON format for detailed programmatic analysis
+#   path: ./reports  # Directory where the reports will be saved
+#   aggregation: 
+#     - average  # Display average transaction performance
+#     - max  # Display maximum performance metrics
+#     - min  # Display minimum performance metrics
+
+# # Optional: Endorsement policy to configure which peers need to endorse the transactions
+# endorsement-policy:
+#   identities:
+#     - role: member
+#       mspId: Org1MSP
+#     - role: member
+#       mspId: Org2MSP
+#   policy:
+#     "1-of": [
+#       { "signed-by": 0 },
+#       { "signed-by": 1 }
+#     ]
+
+# test:
+#   name: basic-contract-benchmark
+#   description: test benchmark
+#   workers:
+#     number: 2
+#   rounds:
+#     - label: miniproject
+#       description: Read asset benchmark
+#       # This is where you define the number of transactions to be processed in this round
+#       txNumber: 100
+#       # Rate control: How the transactions are sent, 34.5 TPS as mentioned in the HTML report
+#       rateControl:
+#         type: fixed-load
+#         opts:
+#           transactionLoad: 34.5  # Matches the throughput of 34.5 TPS in the report
+#       workload:
+#         module: workload/readAsset.js
+#         arguments:
+#           assets: 20
+#           contractId: basic  
+#   observer:
+#     type: local
+#     interval: 1
+#     metrics:
+#       - resource
+#       - memory
+#       - cpu
+
+#   report:
+#     path: report.html
+#     template: report.html
+#     options:
+#       charts: true
 test:
     name: basic-contract-benchmark
     description: test benchmark
@@ -6,8 +116,7 @@ test:
     rounds:
       - label: miniproject
         description: Read asset benchmark
-        # txDuration: 30
-        txNumber: 1000
+        txNumber: 100
         rateControl:
           type: fixed-load
           opts:
@@ -17,3 +126,15 @@ test:
           arguments:
             assets: 20
             contractId: basic
+    monitors:
+      resource:
+      - module: docker
+        options:
+          interval: 5
+          containers:
+          - all
+          charting:
+            bar:
+              metrics: [Memory(avg), CPU%(avg)]
+            polar:
+              metrics: [all]

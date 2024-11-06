@@ -1,0 +1,21 @@
+test:
+  name: zk-snarks-test
+  description: Measure zk-SNARKs performance on Hyperledger Fabric
+
+  workers:
+    type: local
+    number: 1
+
+  rounds:
+    - label: zk-snarks-round
+      description: "Submit transactions with zk-SNARK verification"
+      txNumber: 50        # Number of transactions to submit
+      rateControl:
+        type: fixed-rate
+        opts:
+          tps: 5           # Transactions per second
+
+      workload:
+        module: workload/zk-snarks-workload.js
+        arguments:
+          chaincodeFunction: submitTransaction

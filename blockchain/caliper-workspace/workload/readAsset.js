@@ -1,6 +1,7 @@
 'use strict';
 
 const { WorkloadModuleBase } = require('@hyperledger/caliper-core');
+// const axios = require(axios);
 
 class MyWorkload extends WorkloadModuleBase {
     constructor() {
@@ -33,6 +34,8 @@ class MyWorkload extends WorkloadModuleBase {
             contractArguments: [`${this.workerIndex}_${randomId}`],
             readOnly: true
         };
+        // let result = await contract.evaluateTransaction('readAssetPrivate', assetId);
+        // return result;
 
         await this.sutAdapter.sendRequests(myArgs);
     }
@@ -59,3 +62,4 @@ function createWorkloadModule() {
 }
 
 module.exports.createWorkloadModule = createWorkloadModule;
+

@@ -1,9 +1,12 @@
 import React from "react";
 import "./../../App";
 import { useState, useRef, useEffect } from "react";
+import {useNavigate} from "react-router-dom"
+import './InsurerPage.css';
 import { CodeSharp } from "@material-ui/icons";
 
 export const InsurerFrontPage = () => {
+  const navigate = useNavigate();
   const [selected,setSelected] = useState(null);
   const [data,setData] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -39,6 +42,8 @@ export const InsurerFrontPage = () => {
     console.log("AAya")
 
     const response = await fetch(`http://localhost:5000/registerPolicy`, {
+            credentials: 'include',
+            Origin:"http://localhost:3000/login",
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -76,35 +81,30 @@ export const InsurerFrontPage = () => {
     setAmount("");
     // Close the modal after submission
     setShowModal(false);
+    //window. location. reload();
   };
 
 
   const fetchPolicies = async () => {
-    console.log(localStorage.getItem('userEmail'))
     await fetch("http://localhost:5000/insurerPolicies", {
-        // credentials: 'include',
-        // Origin:"http://localhost:3000/login",
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body:JSON.stringify({
-          email:localStorage.getItem('userEmail')
+            credentials: 'include',
+            Origin:"http://localhost:3000/login",
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            // body:JSON.stringify({
+            //     email:localStorage.getItem('userEmail')
+            // })
+        }).then(async (res) => {
+            let response = await res.json();
+            await setData(response);
+            console.log(response);
         })
-    }).then(async (res) => {
-        let response = await res.json();
-        await setData(response);
-        console.log(response);
-    })
-
-
-
-    // await res.map((data)=>{
-    //    console.log(data)
-    // })
-
-
-}
+.catch(err => {
+      console.error("Error fetching policies: ", err);
+    });
+};
 
   useEffect(() => {
     fetchPolicies();
@@ -117,7 +117,7 @@ export const InsurerFrontPage = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  });
 
   return (
     
@@ -145,7 +145,9 @@ export const InsurerFrontPage = () => {
       )}
        
       </div>
-      <button onClick={handleAddUser}>Add Policy</button>
+      <div className="policybtn">
+      <button className="policybtn" type="submit" onClick={handleAddUser}>Add Policy</button>
+      </div>
       {showModal && (
         <div className="modal-container">
           <div className="modal">
@@ -174,6 +176,11 @@ export const InsurerFrontPage = () => {
           </div>
         </div>
       )}
+       <div className="side-icon">
+        
+        <i className="fas fa-user" onClick={() => navigate('/client/profile')}></i>
+      
+    </div>
     </div>
   
   )
